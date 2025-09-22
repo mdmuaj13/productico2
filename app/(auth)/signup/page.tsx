@@ -1,12 +1,14 @@
 import { GalleryVerticalEnd } from 'lucide-react';
 
 import { SignupForm } from '@/components/signup-form';
+import GuestGuard from '@/components/guest-guard';
 import Image from 'next/image';
 import Link from 'next/link';
 
 export default function SignupPage() {
-	return (
-		<div className="grid min-h-svh lg:grid-cols-2">
+  return (
+    <GuestGuard>
+      <div className="grid min-h-svh lg:grid-cols-2">
 			<div className="bg-muted relative hidden lg:block">
 				<Image
 					src="https://images.unsplash.com/photo-1553413077-190dd305871c?q=80&w=735&auto=format&fit=crop"
@@ -28,8 +30,9 @@ export default function SignupPage() {
 					<div className="w-full max-w-xs">
 						<SignupForm />
 					</div>
-				</div>
-			</div>
-		</div>
-	);
+          </div>
+        </div>
+      </div>
+    </GuestGuard>
+  );
 }

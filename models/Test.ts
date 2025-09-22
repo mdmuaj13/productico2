@@ -10,7 +10,7 @@ const TestSchema = new mongoose.Schema(
 			type: String,
 			required: true,
 		},
-		deleted_at: {
+		deletedAt: {
 			type: Date,
 			default: null,
 		},

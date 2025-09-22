@@ -41,7 +41,7 @@ export default function Home() {
             className="w-full h-12 text-base"
             size="lg"
           >
-            <a href="/dashboard">
+            <a href="/app/dashboard">
               Dashboard
             </a>
           </Button>

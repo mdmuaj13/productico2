@@ -79,11 +79,6 @@ const data = {
 			url: '/app/purchase-orders',
 			icon: IconFileInvoice,
 		},
-		// {
-		// 	title: 'Analytics',
-		// 	url: '/dashboard/analytics',
-		// 	icon: IconChartBar,
-		// },
 	],
 	navClouds: [],
 	navSecondary: [
