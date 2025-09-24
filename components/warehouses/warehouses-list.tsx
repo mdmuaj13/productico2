@@ -168,7 +168,7 @@ export function WarehousesList() {
 				<CardContent>
 					{!warehousesData && !error ? (
 						<div className="flex items-center justify-center py-8">
-							<Spinner />
+							<Spinner variant="pinwheel" />
 						</div>
 					) : warehouses.length === 0 ? (
 						<div className="flex items-center justify-center py-8">

@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { Loader2, Upload, X } from 'lucide-react';
+import { Upload, X } from 'lucide-react';
+import { Spinner } from './shadcn-io/spinner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -121,7 +122,7 @@ export default function ImageUpload({
 						{isUploading && (
 							<div className="absolute inset-0 bg-black/20 rounded-lg flex items-center justify-center z-10">
 								<div className="flex flex-col items-center space-y-2">
-									<Loader2 className="w-8 h-8 text-primary animate-spin" />
+									<Spinner variant="pinwheel" />
 								</div>
 							</div>
 						)}
