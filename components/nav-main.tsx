@@ -48,6 +48,9 @@ export function NavMain({
 		if (url === '/app/warehouses' && pathname.startsWith('/app/warehouses')) {
 			return true;
 		}
+		if (url === '/app/vendors' && pathname.startsWith('/app/vendors')) {
+			return true;
+		}
 		return false;
 	};
 

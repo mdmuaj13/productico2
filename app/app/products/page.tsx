@@ -1,12 +1,11 @@
-import { SiteHeader } from '@/components/site-header';
+import { ProductsList } from '@/components/products/products-list';
 
-const ProductPage = () => {
+export default function ProductsPage() {
 	return (
 		<div>
-			<SiteHeader />
-			<div className="flex flex-1 items-center justify-center">Enter</div>
+			<div className="flex-1 space-y-4 p-8 pt-6">
+				<ProductsList />
+			</div>
 		</div>
 	);
-};
-
-export default ProductPage;
+}

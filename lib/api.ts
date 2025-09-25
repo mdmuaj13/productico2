@@ -1,46 +1,51 @@
-import useSWR from 'swr'
-import { useAuthStore } from './store'
+import useSWR from 'swr';
+import { useAuthStore } from './store';
 
 const fetcher = async (url: string, token?: string) => {
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-  }
+	const headers: HeadersInit = {
+		'Content-Type': 'application/json',
+	};
 
-  if (token) {
-    headers.Authorization = `Bearer ${token}`
-  }
+	if (token) {
+		headers.Authorization = `Bearer ${token}`;
+	}
 
-  const res = await fetch(url, { headers })
+	const res = await fetch(url, { headers });
 
-  if (!res.ok) {
-    throw new Error('Failed to fetch')
-  }
+	if (!res.ok) {
+		throw new Error('Failed to fetch');
+	}
 
-  return res.json()
-}
+	return res.json();
+};
 
 export const useApi = (url: string) => {
-  const token = useAuthStore((state) => state.token)
+	const token = useAuthStore((state) => state.token);
 
-  return useSWR(url, (url) => fetcher(url, token || undefined))
-}
+	return useSWR(url, (url) => fetcher(url, token || undefined));
+};
 
 export const apiCall = async (url: string, options: RequestInit = {}) => {
-  const token = useAuthStore.getState().token
+	const token = useAuthStore.getState().token;
 
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-    ...options.headers,
-  }
+	const headers: Record<string, string> = {
+		...(options.headers as Record<string, string>),
+	};
 
-  if (token) {
-    headers.Authorization = `Bearer ${token}`
-  }
+	// Only set Content-Type for non-FormData requests
+	if (!(options.body instanceof FormData)) {
+		headers['Content-Type'] = 'application/json';
+	}
 
-  const res = await fetch(url, {
-    ...options,
-    headers,
-  })
+	if (token) {
+		headers.Authorization = `Bearer ${token}`;
+	}
 
-  return res.json()
-}
+	const res = await fetch(url, {
+		...options,
+		headers,
+	});
+
+	return res.json();
+};
+

@@ -1,5 +1,6 @@
 import { AppSidebar } from '@/components/app-sidebar';
 import AuthGuard from '@/components/auth-guard';
+import { SiteHeader } from '@/components/site-header';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 
 export default function ProtectedLayout({
@@ -18,6 +19,7 @@ export default function ProtectedLayout({
 				}>
 				<AppSidebar variant="inset" />
 				<SidebarInset>
+					<SiteHeader />
 					<div>{children}</div>
 				</SidebarInset>
 			</SidebarProvider>
