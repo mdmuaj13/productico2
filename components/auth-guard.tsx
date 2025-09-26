@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuthStore } from '@/lib/store';
+import { useAuthStore } from '@/store/store';
 
 interface AuthGuardProps {
 	children: React.ReactNode;

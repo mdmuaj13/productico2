@@ -1,5 +1,5 @@
 import useSWR from 'swr';
-import { useAuthStore } from './store';
+import { useAuthStore } from '../store/store';
 
 const fetcher = async (url: string, token?: string) => {
 	const headers: HeadersInit = {
@@ -48,4 +48,3 @@ export const apiCall = async (url: string, options: RequestInit = {}) => {
 
 	return res.json();
 };
-

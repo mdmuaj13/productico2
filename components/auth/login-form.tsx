@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useAuthStore } from '@/lib/store';
+import { useAuthStore } from '@/store/store';
 import { apiCall } from '@/lib/api';
 
 export function LoginForm({
@@ -15,7 +15,8 @@ export function LoginForm({
 }: React.ComponentProps<'form'>) {
 	const [email, setEmail] = useState('');
 	const [password, setPassword] = useState('');
-	const { login, error, loading, setError, setLoading, clearError } = useAuthStore();
+	const { login, error, loading, setError, setLoading, clearError } =
+		useAuthStore();
 	const router = useRouter();
 
 	useEffect(() => {

@@ -5,8 +5,8 @@ export const createCategorySchema = z.object({
 	slug: z.string().min(2, 'Slug must be at least 2 characters long').optional(),
 	description: z.string().trim().optional(),
 	image: z.string().url('Invalid image URL').or(z.literal('')).optional(),
-	serialNo: z.number().min(0, 'Serial number must be positive').default(0),
-	isActive: z.boolean().default(true),
+	serialNo: z.number().min(0, 'Serial number must be positive').default(0).optional(),
+	isActive: z.boolean().default(true).optional(),
 });
 
 export const updateCategorySchema = z.object({

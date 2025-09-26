@@ -33,24 +33,31 @@ export function NavMain({
 		if (url === '/app/dashboard' && pathname === '/app/dashboard') {
 			return true;
 		}
+		if (url === '/app/warehouses' && pathname.startsWith('/app/warehouses')) {
+			return true;
+		}
 		if (url === '/app/products' && pathname.startsWith('/app/products')) {
 			return true;
 		}
-		if (url === '/app/customers' && pathname.startsWith('/app/customers')) {
+		if (url === '/app/categories' && pathname.startsWith('/app/categories')) {
 			return true;
 		}
 		if (url === '/app/orders' && pathname.startsWith('/app/orders')) {
 			return true;
 		}
-		if (url === '/app/storefront' && pathname.startsWith('/app/storefront')) {
+		if (url === '/app/customers' && pathname.startsWith('/app/customers')) {
 			return true;
 		}
-		if (url === '/app/warehouses' && pathname.startsWith('/app/warehouses')) {
+		if (url === '/app/stock' && pathname.startsWith('/app/stock')) {
+			return true;
+		}
+		if (url === '/app/storefront' && pathname.startsWith('/app/storefront')) {
 			return true;
 		}
 		if (url === '/app/vendors' && pathname.startsWith('/app/vendors')) {
 			return true;
 		}
+
 		return false;
 	};
 
