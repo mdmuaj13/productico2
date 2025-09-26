@@ -34,11 +34,11 @@ export const useWarehouses = (params?: {
 
 	const url = `/api/warehouses${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
 
-	return useApi<WarehouseListResponse>(url);
+	return useApi(url);
 };
 
 export const useWarehouse = (id: string) => {
-	return useApi<{ data: Warehouse }>(`/api/warehouses/${id}`);
+	return useApi(`/api/warehouses/${id}`);
 };
 
 export const createWarehouse = async (data: {

@@ -39,11 +39,11 @@ export const useCategories = (params?: {
 
 	const url = `/api/categories${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
 
-	return useApi<CategoryListResponse>(url);
+	return useApi(url);
 };
 
 export const useCategory = (id: string) => {
-	return useApi<{ data: Category }>(`/api/categories/${id}`);
+	return useApi(`/api/categories/${id}`);
 };
 
 export const createCategory = async (data: CreateCategoryData) => {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,6 +23,11 @@ import {
 } from '@/components/ui/sheet';
 import { toast } from 'sonner';
 import { createPurchaseOrder, useVendors } from '@/hooks/purchase-orders';
+
+interface Vendor {
+	_id: string;
+	name: string;
+}
 
 interface FormData {
 	title: string;
@@ -155,7 +160,7 @@ export function PurchaseOrderForm({ onSuccess }: PurchaseOrderFormProps) {
 						</SelectTrigger>
 						<SelectContent>
 							<SelectItem value="none">No vendor</SelectItem>
-							{vendors.map((vendor) => (
+							{vendors.map((vendor: Vendor) => (
 								<SelectItem key={vendor._id} value={vendor._id}>
 									{vendor.name}
 								</SelectItem>

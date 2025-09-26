@@ -1,5 +1,4 @@
 import { Schema, model, models } from 'mongoose';
-import slugify from 'slugify';
 
 interface IVendor {
 	name: string;

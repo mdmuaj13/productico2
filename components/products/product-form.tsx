@@ -52,7 +52,7 @@ export function ProductForm({ initialData, onSubmit, loading, isEdit }: ProductF
   const [newVariant, setNewVariant] = useState<Variant>({ name: "", price: 0 })
   const [newImage, setNewImage] = useState("")
 
-  const { data: categoriesData } = useApi<{ data: Category[] }>('/api/categories')
+  const { data: categoriesData } = useApi('/api/categories')
   const categories = categoriesData?.data || []
 
   useEffect(() => {
@@ -154,7 +154,7 @@ export function ProductForm({ initialData, onSubmit, loading, isEdit }: ProductF
                 <SelectValue placeholder="Select category" />
               </SelectTrigger>
               <SelectContent>
-                {categories.map((category) => (
+                {categories.map((category: Category) => (
                   <SelectItem key={category._id} value={category._id}>
                     {category.name}
                   </SelectItem>

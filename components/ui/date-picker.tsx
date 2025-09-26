@@ -4,7 +4,7 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 import { Calendar } from "lucide-react";
 
-export interface DatePickerProps extends React.InputHTMLAttributes<HTMLInputElement> {
+export interface DatePickerProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange'> {
 	value?: string;
 	onChange?: (value: string) => void;
 }

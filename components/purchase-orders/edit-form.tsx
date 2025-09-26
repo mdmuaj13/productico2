@@ -23,6 +23,11 @@ import {
 import { updatePurchaseOrder, useVendors } from '@/hooks/purchase-orders';
 import { toast } from 'sonner';
 
+interface Vendor {
+	_id: string;
+	name: string;
+}
+
 interface PurchaseOrder {
 	_id: string;
 	title: string;
@@ -161,7 +166,7 @@ export function PurchaseOrderEditForm({
 						</SelectTrigger>
 						<SelectContent>
 							<SelectItem value="none">No vendor</SelectItem>
-							{vendors.map((vendor) => (
+							{vendors.map((vendor: Vendor) => (
 								<SelectItem key={vendor._id} value={vendor._id}>
 									{vendor.name}
 								</SelectItem>

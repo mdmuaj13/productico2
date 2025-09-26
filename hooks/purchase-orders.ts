@@ -51,15 +51,15 @@ export const usePurchaseOrders = (params?: {
 
 	const url = `/api/purchase-orders${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
 
-	return useApi<PurchaseOrderListResponse>(url);
+	return useApi(url);
 };
 
 export const usePurchaseOrder = (id: string) => {
-	return useApi<{ data: PurchaseOrder }>(`/api/purchase-orders/${id}`);
+	return useApi(`/api/purchase-orders/${id}`);
 };
 
 export const useVendors = () => {
-	return useApi<{ data: Vendor[] }>('/api/vendors');
+	return useApi('/api/vendors');
 };
 
 export const createPurchaseOrder = async (data: {

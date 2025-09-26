@@ -4,17 +4,17 @@ import { ApiSerializer } from '@/types';
 import { NextRequest } from 'next/server';
 import { authenticateToken } from '@/lib/auth';
 import { updateWarehouseSchema } from '@/lib/validations/warehouse';
-import slugify from 'slugify';
 
 export async function GET(
 	request: NextRequest,
-	{ params }: { params: { id: string } }
+	{ params }: { params: Promise<{ id: string }> }
 ) {
 	try {
+		const { id } = await params;
 		await connectDB();
 
 		const warehouse = await Warehouse.findOne({
-			_id: params.id,
+			_id: id,
 			deletedAt: null,
 		});
 
@@ -30,9 +30,10 @@ export async function GET(
 
 export async function PUT(
 	request: NextRequest,
-	{ params }: { params: { id: string } }
+	{ params }: { params: Promise<{ id: string }> }
 ) {
 	try {
+		const { id } = await params;
 		const { error: authError } = await authenticateToken(request);
 		if (authError) return authError;
 
@@ -47,7 +48,7 @@ export async function PUT(
 
 		const { title, slug, description, address } = validation.data;
 
-		const warehouse = await Warehouse.findOne({ _id: params.id, deletedAt: null });
+		const warehouse = await Warehouse.findOne({ _id: id, deletedAt: null });
 
 		if (!warehouse) {
 			return ApiSerializer.notFound('Warehouse not found');
@@ -56,7 +57,7 @@ export async function PUT(
 		if (slug) {
 			const existingWarehouse = await Warehouse.findOne({
 				slug,
-				_id: { $ne: params.id },
+				_id: { $ne: id },
 				deletedAt: null,
 			});
 
@@ -66,7 +67,7 @@ export async function PUT(
 		}
 
 		const updatedWarehouse = await Warehouse.findByIdAndUpdate(
-			params.id,
+			id,
 			{
 				...(title !== undefined && { title }),
 				...(slug !== undefined && { slug }),
@@ -87,21 +88,22 @@ export async function PUT(
 
 export async function DELETE(
 	request: NextRequest,
-	{ params }: { params: { id: string } }
+	{ params }: { params: Promise<{ id: string }> }
 ) {
 	try {
+		const { id } = await params;
 		const { error: authError } = await authenticateToken(request);
 		if (authError) return authError;
 
 		await connectDB();
 
-		const warehouse = await Warehouse.findOne({ _id: params.id, deletedAt: null });
+		const warehouse = await Warehouse.findOne({ _id: id, deletedAt: null });
 
 		if (!warehouse) {
 			return ApiSerializer.notFound('Warehouse not found');
 		}
 
-		await Warehouse.findByIdAndUpdate(params.id, { deletedAt: new Date() });
+		await Warehouse.findByIdAndUpdate(id, { deletedAt: new Date() });
 
 		return ApiSerializer.success(null, 'Warehouse deleted successfully');
 	} catch {

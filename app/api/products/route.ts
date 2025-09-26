@@ -4,7 +4,6 @@ import { ApiSerializer } from '@/types';
 import { NextRequest } from 'next/server';
 import { authenticateToken } from '@/lib/auth';
 import { createProductSchema } from '@/lib/validations/product';
-import slugify from 'slugify';
 
 export async function GET(request: NextRequest) {
 	try {
@@ -18,7 +17,7 @@ export async function GET(request: NextRequest) {
 
 		const skip = (page - 1) * limit;
 
-		const query: any = { deletedAt: null };
+		const query: Record<string, unknown> = { deletedAt: null };
 
 		if (search) {
 			query.$or = [

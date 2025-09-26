@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
 
 		const skip = (page - 1) * limit;
 
-		const query: any = { deletedAt: null };
+		const query: Record<string, unknown> = { deletedAt: null };
 
 		if (search) {
 			query.$or = [

@@ -119,7 +119,7 @@ export function PurchaseOrdersList() {
 		setSearch(searchTerm);
 	};
 
-	const handleKeyPress = (e: React.KeyboardEvent) => {
+	const handleKeyDown = (e: React.KeyboardEvent) => {
 		if (e.key === 'Enter') {
 			handleSearch();
 		}
@@ -160,7 +160,7 @@ export function PurchaseOrdersList() {
 		{
 			key: 'vendor',
 			header: 'Vendor',
-			render: (value: unknown, row: PurchaseOrder) => (
+			render: (_: unknown, row: PurchaseOrder) => (
 				<span className="max-w-xs truncate block">
 					{row.vendor?.name || 'No vendor'}
 				</span>
@@ -247,7 +247,7 @@ export function PurchaseOrdersList() {
 									placeholder="Search purchase orders..."
 									value={searchTerm}
 									onChange={(e) => setSearchTerm(e.target.value)}
-									onKeyPress={handleKeyPress}
+									onKeyDown={handleKeyDown}
 									className="pr-10"
 								/>
 								<button

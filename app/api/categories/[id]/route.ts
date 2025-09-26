@@ -9,13 +9,14 @@ import slugify from 'slugify';
 // GET /api/categories/[id]
 export async function GET(
 	request: NextRequest,
-	{ params }: { params: { id: string } }
+	{ params }: { params: Promise<{ id: string }> }
 ) {
 	try {
 		await connectDB();
+		const { id } = await params;
 
 		const category = await Category.findOne({
-			_id: params.id,
+			_id: id,
 			deletedAt: null,
 		});
 
@@ -33,13 +34,14 @@ export async function GET(
 // PUT /api/categories/[id]
 export async function PUT(
 	request: NextRequest,
-	{ params }: { params: { id: string } }
+	{ params }: { params: Promise<{ id: string }> }
 ) {
 	try {
 		const { error: authError } = await authenticateToken(request);
 		if (authError) return authError;
 
 		await connectDB();
+		const { id } = await params;
 
 		const body = await request.json();
 
@@ -58,7 +60,7 @@ export async function PUT(
 		// Check for duplicates
 		if (updateData.title || updateData.slug) {
 			const existingCategory = await Category.findOne({
-				_id: { $ne: params.id },
+				_id: { $ne: id },
 				$or: [
 					...(updateData.title ? [{ title: updateData.title }] : []),
 					...(updateData.slug ? [{ slug: updateData.slug }] : []),
@@ -72,7 +74,7 @@ export async function PUT(
 		}
 
 		const category = await Category.findOneAndUpdate(
-			{ _id: params.id, deletedAt: null },
+			{ _id: id, deletedAt: null },
 			{ $set: updateData },
 			{ new: true, runValidators: true }
 		);
@@ -90,16 +92,17 @@ export async function PUT(
 // DELETE /api/categories/[id]
 export async function DELETE(
 	request: NextRequest,
-	{ params }: { params: { id: string } }
+	{ params }: { params: Promise<{ id: string }> }
 ) {
 	try {
 		const { error: authError } = await authenticateToken(request);
 		if (authError) return authError;
 
 		await connectDB();
+		const { id } = await params;
 
 		const category = await Category.findOneAndUpdate(
-			{ _id: params.id, deletedAt: null },
+			{ _id: id, deletedAt: null },
 			{ $set: { deletedAt: new Date() } },
 			{ new: true }
 		);

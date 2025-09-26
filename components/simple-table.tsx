@@ -72,10 +72,10 @@ export function SimpleTable<T = unknown>({
   })
 
   const tableColumns: ColumnDef<T>[] = React.useMemo(() => {
-    const cols = columns.map((col) => ({
+    const cols: ColumnDef<T>[] = columns.map((col) => ({
       accessorKey: col.key,
       header: col.header,
-      cell: ({ row, getValue }) => {
+      cell: ({ row, getValue }: { row: { original: T }; getValue: () => unknown }) => {
         const value = getValue()
         return col.render ? col.render(value, row.original) : String(value || "")
       },
@@ -86,7 +86,7 @@ export function SimpleTable<T = unknown>({
       cols.push({
         id: "actions",
         header: "Actions",
-        cell: ({ row }) => (
+        cell: ({ row }: { row: { original: T } }) => (
           <div className="flex items-center gap-2">
             {actions.map((action, index) => (
               <Button

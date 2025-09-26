@@ -1,18 +1,14 @@
 import { NextResponse } from 'next/server';
 
-interface ApiResponse<T = any> {
+interface ApiResponse<T = unknown> {
 	status_code: number;
 	message: string;
 	data?: T;
-	meta?: {
-		total: number;
-		page: number;
-		limit: number;
-	};
+	meta?: Record<string, unknown>;
 }
 
 export class ApiSerializer {
-	static success(data: any, message = 'Success', meta?: any) {
+	static success<T = unknown>(data: T, message = 'Success', meta?: Record<string, unknown>) {
 		const response: ApiResponse = {
 			status_code: 200,
 			message,
@@ -24,7 +20,7 @@ export class ApiSerializer {
 		return NextResponse.json(response);
 	}
 
-	static created(data: any, message = 'Created successfully') {
+	static created<T = unknown>(data: T, message = 'Created successfully') {
 		return NextResponse.json({
 			status_code: 201,
 			message,

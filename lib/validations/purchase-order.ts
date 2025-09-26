@@ -7,7 +7,7 @@ export const createPurchaseOrderSchema = z.object({
 	order_info: z.string().optional(),
 	price: z.number().min(0, 'Price must be a positive number'),
 	status: z.enum(['pending', 'approved', 'received', 'cancelled'], {
-		required_error: 'Status is required',
+		message: 'Status is required',
 	}),
 });
 

@@ -1,4 +1,3 @@
-import { SiteHeader } from '@/components/site-header';
 
 const ViewWarehouse = () => {
   return (

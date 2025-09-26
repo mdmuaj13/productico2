@@ -7,13 +7,14 @@ import { updateVendorSchema } from '@/lib/validations/vendor';
 
 export async function GET(
 	request: NextRequest,
-	{ params }: { params: { id: string } }
+	{ params }: { params: Promise<{ id: string }> }
 ) {
 	try {
+		const { id } = await params;
 		await connectDB();
 
 		const vendor = await Vendor.findOne({
-			_id: params.id,
+			_id: id,
 			deletedAt: null,
 		});
 
@@ -29,9 +30,10 @@ export async function GET(
 
 export async function PUT(
 	request: NextRequest,
-	{ params }: { params: { id: string } }
+	{ params }: { params: Promise<{ id: string }> }
 ) {
 	try {
+		const { id } = await params;
 		const { error: authError } = await authenticateToken(request);
 		if (authError) return authError;
 
@@ -46,14 +48,14 @@ export async function PUT(
 
 		const { name, contact_number, email, address, remarks } = validation.data;
 
-		const vendor = await Vendor.findOne({ _id: params.id, deletedAt: null });
+		const vendor = await Vendor.findOne({ _id: id, deletedAt: null });
 
 		if (!vendor) {
 			return ApiSerializer.notFound('Vendor not found');
 		}
 
 		const updatedVendor = await Vendor.findByIdAndUpdate(
-			params.id,
+			id,
 			{
 				...(name !== undefined && { name }),
 				...(contact_number !== undefined && { contact_number }),
@@ -72,21 +74,22 @@ export async function PUT(
 
 export async function DELETE(
 	request: NextRequest,
-	{ params }: { params: { id: string } }
+	{ params }: { params: Promise<{ id: string }> }
 ) {
 	try {
+		const { id } = await params;
 		const { error: authError } = await authenticateToken(request);
 		if (authError) return authError;
 
 		await connectDB();
 
-		const vendor = await Vendor.findOne({ _id: params.id, deletedAt: null });
+		const vendor = await Vendor.findOne({ _id: id, deletedAt: null });
 
 		if (!vendor) {
 			return ApiSerializer.notFound('Vendor not found');
 		}
 
-		await Vendor.findByIdAndUpdate(params.id, { deletedAt: new Date() });
+		await Vendor.findByIdAndUpdate(id, { deletedAt: new Date() });
 
 		return ApiSerializer.success(null, 'Vendor deleted successfully');
 	} catch {

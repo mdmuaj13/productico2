@@ -22,6 +22,7 @@ import { Edit, Trash2, Plus, Search } from 'lucide-react';
 import { useProducts, deleteProduct } from '@/hooks/products';
 import { ProductForm } from './product-form';
 import { createProduct, updateProduct } from '@/hooks/products';
+import { CreateProductData, UpdateProductData } from '@/lib/validations/product';
 import { toast } from 'sonner';
 import { useApi } from '@/lib/api';
 import { DataTable, Column } from '@/components/dashboard/table';
@@ -46,7 +47,7 @@ interface Product {
 	salePrice?: number;
 	unit: string;
 	tags: string[];
-	variants: any[];
+	variants: Record<string, unknown>[];
 }
 
 export function ProductsList() {
@@ -55,7 +56,7 @@ export function ProductsList() {
 	const [categoryFilter, setCategoryFilter] = useState('all');
 	const [createDialogOpen, setCreateDialogOpen] = useState(false);
 	const [editDialogOpen, setEditDialogOpen] = useState(false);
-	const [editingProduct, setEditingProduct] = useState<any>(null);
+	const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 	const [loading, setLoading] = useState(false);
 
 	const {
@@ -69,7 +70,7 @@ export function ProductsList() {
 		categoryId: categoryFilter === 'all' ? undefined : categoryFilter,
 	});
 
-	const { data: categoriesData } = useApi<{ data: Category[] }>(
+	const { data: categoriesData } = useApi(
 		'/api/categories'
 	);
 	const categories = categoriesData?.data || [];
@@ -77,10 +78,10 @@ export function ProductsList() {
 	const products = productsData?.data || [];
 	const meta = productsData?.meta;
 
-	const handleCreateProduct = async (data: any) => {
+	const handleCreateProduct = async (data: CreateProductData | UpdateProductData) => {
 		setLoading(true);
 		try {
-			await createProduct(data);
+			await createProduct(data as CreateProductData);
 			toast.success('Product created successfully');
 			setCreateDialogOpen(false);
 			mutateProducts();
@@ -91,7 +92,7 @@ export function ProductsList() {
 		}
 	};
 
-	const handleUpdateProduct = async (data: any) => {
+	const handleUpdateProduct = async (data: UpdateProductData) => {
 		if (!editingProduct) return;
 
 		setLoading(true);
@@ -120,7 +121,7 @@ export function ProductsList() {
 		}
 	};
 
-	const handleEditProduct = (product: any) => {
+	const handleEditProduct = (product: Product) => {
 		setEditingProduct(product);
 		setEditDialogOpen(true);
 	};
@@ -223,7 +224,7 @@ export function ProductsList() {
 							<SelectContent>
 								<SelectItem value="all">All Categories</SelectItem>
 								{categories?.length > 0 &&
-									categories?.map((category) => (
+									categories?.map((category: Category) => (
 										<SelectItem key={category._id} value={category._id}>
 											{category.name}
 										</SelectItem>
@@ -261,7 +262,13 @@ export function ProductsList() {
 					</DialogHeader>
 					{editingProduct && (
 						<ProductForm
-							initialData={editingProduct}
+							initialData={{
+								...editingProduct,
+								categoryId: typeof editingProduct.categoryId === 'object'
+									? editingProduct.categoryId._id
+									: editingProduct.categoryId,
+								variants: editingProduct.variants as { name: string; price: number; salePrice?: number }[]
+							}}
 							onSubmit={handleUpdateProduct}
 							loading={loading}
 							isEdit

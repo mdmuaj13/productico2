@@ -1,4 +1,4 @@
-import { api, apiCall } from '@/lib/api';
+import { apiCall } from '@/lib/api';
 import { useState } from 'react';
 
 export const useImageUpload = () => {
@@ -47,10 +47,11 @@ export const useImageUpload = () => {
 
 	const deleteImage = async (imageUrl: string) => {
 		try {
-			const response = await api.delete(`/v1/upload/image`, {
-				data: {
+			const response = await apiCall(`/api/upload/delete`, {
+				method: 'DELETE',
+				body: JSON.stringify({
 					url: imageUrl,
-				},
+				}),
 			});
 			return response.data.data.url;
 		} catch (error) {

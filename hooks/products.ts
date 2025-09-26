@@ -53,11 +53,11 @@ export const useProducts = (params?: {
 
   const url = `/api/products${queryParams.toString() ? `?${queryParams.toString()}` : ''}`
 
-  return useApi<ProductsResponse>(url)
+  return useApi(url)
 }
 
 export const useProduct = (id: string) => {
-  return useApi<{ data: Product }>(`/api/products/${id}`)
+  return useApi(`/api/products/${id}`)
 }
 
 export const createProduct = async (data: CreateProductData) => {

@@ -8,13 +8,14 @@ import { updatePurchaseOrderSchema } from '@/lib/validations/purchaseOrder';
 // GET /api/purchase-orders/[id]
 export async function GET(
 	request: NextRequest,
-	{ params }: { params: { id: string } }
+	{ params }: { params: Promise<{ id: string }> }
 ) {
 	try {
+		const { id } = await params;
 		await connectDB();
 
 		const purchaseOrder = await PurchaseOrder.findOne({
-			_id: params.id,
+			_id: id,
 			deletedAt: null,
 		}).populate({
 			path: 'vendor_id',
@@ -36,9 +37,10 @@ export async function GET(
 // PUT /api/purchase-orders/[id]
 export async function PUT(
 	request: NextRequest,
-	{ params }: { params: { id: string } }
+	{ params }: { params: Promise<{ id: string }> }
 ) {
 	try {
+		const { id } = await params;
 		const { error: authError } = await authenticateToken(request);
 		if (authError) return authError;
 
@@ -54,7 +56,7 @@ export async function PUT(
 		const updateData = validation.data;
 
 		const purchaseOrder = await PurchaseOrder.findOneAndUpdate(
-			{ _id: params.id, deletedAt: null },
+			{ _id: id, deletedAt: null },
 			{ $set: updateData },
 			{ new: true, runValidators: true }
 		).populate({
@@ -76,16 +78,17 @@ export async function PUT(
 // DELETE /api/purchase-orders/[id]
 export async function DELETE(
 	request: NextRequest,
-	{ params }: { params: { id: string } }
+	{ params }: { params: Promise<{ id: string }> }
 ) {
 	try {
+		const { id } = await params;
 		const { error: authError } = await authenticateToken(request);
 		if (authError) return authError;
 
 		await connectDB();
 
 		const purchaseOrder = await PurchaseOrder.findOneAndUpdate(
-			{ _id: params.id, deletedAt: null },
+			{ _id: id, deletedAt: null },
 			{ $set: { deletedAt: new Date() } },
 			{ new: true }
 		);

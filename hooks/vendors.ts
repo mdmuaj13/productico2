@@ -35,11 +35,11 @@ export const useVendors = (params?: {
 
 	const url = `/api/vendors${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
 
-	return useApi<VendorListResponse>(url);
+	return useApi(url);
 };
 
 export const useVendor = (id: string) => {
-	return useApi<{ data: Vendor }>(`/api/vendors/${id}`);
+	return useApi(`/api/vendors/${id}`);
 };
 
 export const createVendor = async (data: {
