@@ -2,36 +2,18 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from '@/components/ui/select';
-import {
-	Dialog,
-	DialogContent,
-	DialogHeader,
-	DialogTitle,
-	DialogTrigger,
-} from '@/components/ui/dialog';
-import { Edit, Trash2, Plus, Search } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Plus } from 'lucide-react';
 import { useProducts, deleteProduct } from '@/hooks/products';
 import { ProductForm } from './product-form';
-import { createProduct, updateProduct } from '@/hooks/products';
-import { CreateProductData, UpdateProductData } from '@/lib/validations/product';
+import { ProductEditForm } from './edit-form';
+import { ProductView } from './view';
 import { toast } from 'sonner';
-import { useApi } from '@/lib/api';
-import { DataTable, Column } from '@/components/dashboard/table';
+import { SimpleTable } from '@/components/simple-table';
+import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
+import { Spinner } from '../ui/shadcn-io/spinner';
 
-interface Category {
-	_id: string;
-	name: string;
-	slug: string;
-}
 
 interface Product {
 	_id: string;
@@ -48,125 +30,138 @@ interface Product {
 	unit: string;
 	tags: string[];
 	variants: Record<string, unknown>[];
+	createdAt: string;
+	updatedAt: string;
 }
 
 export function ProductsList() {
-	const [page, setPage] = useState(1);
-	const [search, setSearch] = useState('');
-	const [categoryFilter, setCategoryFilter] = useState('all');
-	const [createDialogOpen, setCreateDialogOpen] = useState(false);
-	const [editDialogOpen, setEditDialogOpen] = useState(false);
+	const [createSheetOpen, setCreateSheetOpen] = useState(false);
+	const [editSheetOpen, setEditSheetOpen] = useState(false);
+	const [viewSheetOpen, setViewSheetOpen] = useState(false);
 	const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-	const [loading, setLoading] = useState(false);
+	const [viewingProduct, setViewingProduct] = useState<Product | null>(null);
+	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+	const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
+	const [isDeleting, setIsDeleting] = useState(false);
 
 	const {
 		data: productsData,
 		error,
 		mutate: mutateProducts,
 	} = useProducts({
-		page,
+		page: 1,
 		limit: 10,
-		search,
-		categoryId: categoryFilter === 'all' ? undefined : categoryFilter,
 	});
 
-	const { data: categoriesData } = useApi(
-		'/api/categories'
-	);
-	const categories = categoriesData?.data || [];
 
 	const products = productsData?.data || [];
 	const meta = productsData?.meta;
 
-	const handleCreateProduct = async (data: CreateProductData | UpdateProductData) => {
-		setLoading(true);
-		try {
-			await createProduct(data as CreateProductData);
-			toast.success('Product created successfully');
-			setCreateDialogOpen(false);
-			mutateProducts();
-		} catch (error) {
-			toast.error('Failed to create product');
-		} finally {
-			setLoading(false);
-		}
+	const handleDeleteClick = (product: Product) => {
+		setDeletingProduct(product);
+		setDeleteDialogOpen(true);
 	};
 
-	const handleUpdateProduct = async (data: UpdateProductData) => {
-		if (!editingProduct) return;
+	const handleDeleteConfirm = async () => {
+		if (!deletingProduct) return;
 
-		setLoading(true);
+		setIsDeleting(true);
 		try {
-			await updateProduct(editingProduct._id, data);
-			toast.success('Product updated successfully');
-			setEditDialogOpen(false);
-			setEditingProduct(null);
-			mutateProducts();
-		} catch (error) {
-			toast.error('Failed to update product');
-		} finally {
-			setLoading(false);
-		}
-	};
-
-	const handleDeleteProduct = async (id: string) => {
-		if (!confirm('Are you sure you want to delete this product?')) return;
-
-		try {
-			await deleteProduct(id);
+			await deleteProduct(deletingProduct._id);
 			toast.success('Product deleted successfully');
 			mutateProducts();
-		} catch (error) {
+		} catch {
 			toast.error('Failed to delete product');
+		} finally {
+			setIsDeleting(false);
+			setDeleteDialogOpen(false);
+			setDeletingProduct(null);
 		}
+	};
+
+	const handleViewProduct = (product: Product) => {
+		setViewingProduct(product);
+		setViewSheetOpen(true);
 	};
 
 	const handleEditProduct = (product: Product) => {
 		setEditingProduct(product);
-		setEditDialogOpen(true);
+		setEditSheetOpen(true);
 	};
 
-	const columns: Column<Product>[] = [
+	const handleViewToEdit = () => {
+		if (viewingProduct) {
+			setViewSheetOpen(false);
+			setEditingProduct(viewingProduct);
+			setEditSheetOpen(true);
+		}
+	};
+
+	const handleViewToDelete = () => {
+		setViewSheetOpen(false);
+		mutateProducts();
+	};
+
+	const handleCreateSuccess = () => {
+		setCreateSheetOpen(false);
+		mutateProducts();
+	};
+
+	const handleEditSuccess = () => {
+		setEditSheetOpen(false);
+		setEditingProduct(null);
+		mutateProducts();
+	};
+
+	const handleViewSuccess = () => {
+		setViewSheetOpen(false);
+		setViewingProduct(null);
+		mutateProducts();
+	};
+
+	const columns = [
 		{
-			id: 'title',
+			key: 'title',
 			header: 'Product',
-			accessor: (product) => product.title,
 		},
 		{
-			id: 'category',
+			key: 'categoryId',
 			header: 'Category',
-			accessor: (product) => product.categoryId.title,
+			render: (value: unknown) => (value as Product['categoryId']).title,
 		},
 		{
-			id: 'price',
+			key: 'price',
 			header: 'Price',
-			accessor: (product) => `$${product.price}`,
+			render: (value: unknown) => `$${value}`,
 		},
 		{
-			id: 'unit',
+			key: 'unit',
 			header: 'Unit',
-			accessor: (product) => product.unit,
 		},
 		{
-			id: 'actions',
-			header: 'Actions',
-			className: 'text-right',
-			cell: (product) => (
-				<div className="flex gap-2 justify-end">
-					<Button
-						variant="outline"
-						size="sm"
-						onClick={() => handleEditProduct(product)}>
-						<Edit className="h-4 w-4" />
-					</Button>
-					<Button
-						variant="destructive"
-						size="sm"
-						onClick={() => handleDeleteProduct(product._id)}>
-						<Trash2 className="h-4 w-4" />
-					</Button>
-				</div>
-			),
+			key: 'createdAt',
+			header: 'Created',
+			render: (value: unknown) => new Date(String(value)).toLocaleDateString(),
+		},
+	];
+
+	const actions = [
+		{
+			label: 'View',
+			onClick: (product: Product) => {
+				handleViewProduct(product);
+			},
+			variant: 'secondary' as const,
+		},
+		{
+			label: 'Edit',
+			onClick: (product: Product) => handleEditProduct(product),
+			variant: 'outline' as const,
+		},
+		{
+			label: 'Delete',
+			onClick: (product: Product) => handleDeleteClick(product),
+			variant: 'destructive' as const,
 		},
 	];
 
@@ -185,97 +180,86 @@ export function ProductsList() {
 			<div className="flex items-center justify-between">
 				<h1 className="text-2xl font-bold">Products ({meta?.total || 0})</h1>
 				<div className="flex items-center gap-2">
-					<Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-						<DialogTrigger asChild>
+					<Sheet open={createSheetOpen} onOpenChange={setCreateSheetOpen}>
+						<SheetTrigger asChild>
 							<Button>
 								<Plus className="h-4 w-4 mr-2" />
 								Add Product
 							</Button>
-						</DialogTrigger>
-						<DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-							<DialogHeader>
-								<DialogTitle>Create Product</DialogTitle>
-							</DialogHeader>
-							<ProductForm onSubmit={handleCreateProduct} loading={loading} />
-						</DialogContent>
-					</Dialog>
+						</SheetTrigger>
+						<SheetContent>
+							<div className="h-full">
+								<ProductForm onSuccess={handleCreateSuccess} />
+							</div>
+						</SheetContent>
+					</Sheet>
 				</div>
 			</div>
 
 			{/* Products Table */}
 			<Card>
-				<CardHeader>
-					<div className="flex gap-4 items-center">
-						<div className="flex-1">
-							<div className="relative">
-								<Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-								<Input
-									placeholder="Search products..."
-									value={search}
-									onChange={(e) => setSearch(e.target.value)}
-									className="pl-8"
-								/>
-							</div>
-						</div>
-						<Select value={categoryFilter} onValueChange={setCategoryFilter}>
-							<SelectTrigger className="w-48">
-								<SelectValue placeholder="Filter by category" />
-							</SelectTrigger>
-							<SelectContent>
-								<SelectItem value="all">All Categories</SelectItem>
-								{categories?.length > 0 &&
-									categories?.map((category: Category) => (
-										<SelectItem key={category._id} value={category._id}>
-											{category.name}
-										</SelectItem>
-									))}
-							</SelectContent>
-						</Select>
-					</div>
-				</CardHeader>
 				<CardContent>
-					<DataTable
-						data={products}
-						columns={columns}
-						loading={!productsData && !error}
-						emptyMessage="No products found"
-						pagination={
-							meta
-								? {
-										page: meta.page,
-										limit: meta.limit,
-										total: meta.total,
-										totalPages: meta.totalPages,
-										onPageChange: setPage,
-								  }
-								: undefined
-						}
-					/>
+					{!productsData && !error ? (
+						<div className="flex items-center justify-center py-8">
+							<Spinner variant="pinwheel" />
+						</div>
+					) : products.length === 0 ? (
+						<div className="flex items-center justify-center py-8">
+							<p>No products found</p>
+						</div>
+					) : (
+						<SimpleTable
+							data={products}
+							columns={columns}
+							actions={actions}
+							showPagination={false}
+						/>
+					)}
 				</CardContent>
 			</Card>
 
-			{/* Edit Dialog */}
-			<Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-				<DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-					<DialogHeader>
-						<DialogTitle>Edit Product</DialogTitle>
-					</DialogHeader>
-					{editingProduct && (
-						<ProductForm
-							initialData={{
-								...editingProduct,
-								categoryId: typeof editingProduct.categoryId === 'object'
-									? editingProduct.categoryId._id
-									: editingProduct.categoryId,
-								variants: editingProduct.variants as { name: string; price: number; salePrice?: number }[]
-							}}
-							onSubmit={handleUpdateProduct}
-							loading={loading}
-							isEdit
-						/>
-					)}
-				</DialogContent>
-			</Dialog>
+			{/* View Sheet */}
+			<Sheet open={viewSheetOpen} onOpenChange={setViewSheetOpen}>
+				<SheetContent>
+					<div className="h-full">
+						{viewingProduct && (
+							<ProductView
+								product={viewingProduct}
+								onEdit={handleViewToEdit}
+								onDelete={handleViewToDelete}
+								onSuccess={handleViewSuccess}
+							/>
+						)}
+					</div>
+				</SheetContent>
+			</Sheet>
+
+			{/* Edit Sheet */}
+			<Sheet open={editSheetOpen} onOpenChange={setEditSheetOpen}>
+				<SheetContent>
+					<div className="h-full">
+						{editingProduct && (
+							<ProductEditForm
+								product={editingProduct}
+								onSuccess={handleEditSuccess}
+							/>
+						)}
+					</div>
+				</SheetContent>
+			</Sheet>
+
+			{/* Delete Confirmation Dialog */}
+			<ConfirmationDialog
+				open={deleteDialogOpen}
+				onOpenChange={setDeleteDialogOpen}
+				onConfirm={handleDeleteConfirm}
+				title="Delete Product"
+				description={`Are you sure you want to delete "${deletingProduct?.title}"? This action cannot be undone.`}
+				confirmText="Delete"
+				cancelText="Cancel"
+				variant="destructive"
+				isLoading={isDeleting}
+			/>
 		</div>
 	);
 }

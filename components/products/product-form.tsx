@@ -8,9 +8,18 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import {
+	SheetHeader,
+	SheetTitle,
+	SheetDescription,
+	SheetFooter,
+	SheetClose,
+} from '@/components/ui/sheet'
 import { X, Plus } from "lucide-react"
-import { CreateProductData, UpdateProductData } from "@/lib/validations/product"
+import { CreateProductData } from "@/lib/validations/product"
+import { createProduct } from "@/hooks/products"
 import { useApi } from "@/lib/api"
+import { toast } from "sonner"
 import slugify from "slugify"
 
 interface Category {
@@ -27,25 +36,24 @@ interface Variant {
 
 interface ProductFormProps {
   initialData?: Partial<CreateProductData>
-  onSubmit: (data: CreateProductData | UpdateProductData) => Promise<void>
-  loading?: boolean
-  isEdit?: boolean
+  onSuccess?: () => void
 }
 
-export function ProductForm({ initialData, onSubmit, loading, isEdit }: ProductFormProps) {
+export function ProductForm({ onSuccess }: ProductFormProps) {
+  const [isLoading, setIsLoading] = useState(false)
   const [formData, setFormData] = useState({
-    title: initialData?.title || "",
-    slug: initialData?.slug || "",
-    thumbnail: initialData?.thumbnail || "",
-    images: initialData?.images || [],
-    description: initialData?.description || "",
-    shortDetail: initialData?.shortDetail || "",
-    price: initialData?.price || 0,
-    salePrice: initialData?.salePrice || undefined,
-    unit: initialData?.unit || "piece",
-    tags: initialData?.tags || [],
-    categoryId: initialData?.categoryId || "",
-    variants: initialData?.variants || [],
+    title: "",
+    slug: "",
+    thumbnail: "",
+    images: [] as string[],
+    description: "",
+    shortDetail: "",
+    price: 0,
+    salePrice: undefined as number | undefined,
+    unit: "piece",
+    tags: [] as string[],
+    categoryId: "",
+    variants: [] as Variant[],
   })
 
   const [newTag, setNewTag] = useState("")
@@ -56,17 +64,48 @@ export function ProductForm({ initialData, onSubmit, loading, isEdit }: ProductF
   const categories = categoriesData?.data || []
 
   useEffect(() => {
-    if (formData.title && !isEdit) {
+    if (formData.title) {
       setFormData(prev => ({
         ...prev,
         slug: slugify(prev.title, { lower: true, strict: true })
       }))
     }
-  }, [formData.title, isEdit])
+  }, [formData.title])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    await onSubmit(formData)
+    setIsLoading(true)
+
+    try {
+      await createProduct(formData as CreateProductData)
+      toast.success('Product created successfully')
+      // Reset form
+      setFormData({
+        title: "",
+        slug: "",
+        thumbnail: "",
+        images: [] as string[],
+        description: "",
+        shortDetail: "",
+        price: 0,
+        salePrice: undefined as number | undefined,
+        unit: "piece",
+        tags: [] as string[],
+        categoryId: "",
+        variants: [] as Variant[],
+      })
+      setNewTag("")
+      setNewVariant({ name: "", price: 0 })
+      setNewImage("")
+
+      onSuccess?.()
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to create product'
+      )
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const addTag = () => {
@@ -121,7 +160,15 @@ export function ProductForm({ initialData, onSubmit, loading, isEdit }: ProductF
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <div className="flex flex-col h-full space-y-6 p-4 py-8">
+      <SheetHeader className="px-0">
+        <SheetTitle>Create Product</SheetTitle>
+        <SheetDescription>
+          Add a new product to your inventory system.
+        </SheetDescription>
+      </SheetHeader>
+
+      <form onSubmit={handleSubmit} className="flex-1 space-y-6 py-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-4">
           <div>
@@ -349,11 +396,18 @@ export function ProductForm({ initialData, onSubmit, loading, isEdit }: ProductF
         </CardContent>
       </Card>
 
-      <div className="flex justify-end gap-4">
-        <Button type="submit" disabled={loading}>
-          {loading ? "Saving..." : isEdit ? "Update Product" : "Create Product"}
+      </form>
+
+      <SheetFooter className="gap-2 px-0 mt-auto">
+        <SheetClose asChild>
+          <Button type="button" variant="outline" disabled={isLoading}>
+            Cancel
+          </Button>
+        </SheetClose>
+        <Button type="submit" disabled={isLoading} onClick={handleSubmit}>
+          {isLoading ? 'Creating...' : 'Create Product'}
         </Button>
-      </div>
-    </form>
+      </SheetFooter>
+    </div>
   )
 }

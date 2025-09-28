@@ -1,5 +1,6 @@
 import connectDB from '@/lib/db';
 import Product from '@/models/Product';
+import Category from '@/models/Category';
 import { ApiSerializer } from '@/types';
 import { NextRequest } from 'next/server';
 import { authenticateToken } from '@/lib/auth';
@@ -8,6 +9,9 @@ import { createProductSchema } from '@/lib/validations/product';
 export async function GET(request: NextRequest) {
 	try {
 		await connectDB();
+
+		// Ensure Category model is registered for populate
+		void Category;
 
 		const searchParams = request.nextUrl.searchParams;
 		const page = parseInt(searchParams.get('page') || '1');
@@ -35,7 +39,8 @@ export async function GET(request: NextRequest) {
 			.populate('categoryId', 'title slug description image')
 			.sort({ createdAt: -1 })
 			.skip(skip)
-			.limit(limit);
+			.limit(limit)
+			.lean();
 
 		const total = await Product.countDocuments(query);
 
