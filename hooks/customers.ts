@@ -108,14 +108,14 @@ export async function updateCustomer(
 	});
 }
 
-export async function deleteCustomer(id: string) {
+export async function deleteCustomer(id: string): Promise<void> {
 	// TODO: Replace with actual API call when backend is ready
 	console.log('Deleting customer:', id);
 
 	// Simulate API call
-	return new Promise((resolve) => {
+	return new Promise<void>((resolve) => {
 		setTimeout(() => {
-			resolve({ success: true });
+			resolve();
 		}, 500);
 	});
 }

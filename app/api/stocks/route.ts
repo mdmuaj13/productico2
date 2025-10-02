@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
 		}
 
 		const stocks = await Stock.find(query)
-			.populate('productId', 'title slug thumbnail variants')
+			.populate('productId', 'title slug variants')
 			.populate('warehouseId', 'title slug')
 			.sort({ createdAt: -1 })
 			.skip(skip)
@@ -44,7 +44,8 @@ export async function GET(request: NextRequest) {
 		};
 
 		return ApiSerializer.success(stocks, 'Stocks retrieved successfully', meta);
-	} catch {
+	} catch (e) {
+		console.log(e);
 		return ApiSerializer.error('Failed to retrieve stocks');
 	}
 }

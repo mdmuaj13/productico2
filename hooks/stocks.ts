@@ -57,11 +57,11 @@ export const useStocks = (params?: {
 
 	const url = `/api/stocks${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
 
-	return useApi<StockListResponse>(url);
+	return useApi(url);
 };
 
 export const useStock = (id: string) => {
-	return useApi<{ data: Stock }>(`/api/stocks/${id}`);
+	return useApi(`/api/stocks/${id}`);
 };
 
 export const createStock = async (data: {

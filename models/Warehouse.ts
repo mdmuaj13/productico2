@@ -31,7 +31,6 @@ warehouseSchema.pre('save', function (next) {
 	next();
 });
 
-warehouseSchema.index({ slug: 1 });
 warehouseSchema.index({ title: 1 });
 warehouseSchema.index({ deletedAt: 1 });
 

@@ -24,7 +24,6 @@ const categorySchema = new Schema<ICategory>(
 		slug: {
 			type: String,
 			unique: true,
-			index: true,
 		},
 		description: {
 			type: String,
@@ -59,8 +58,6 @@ categorySchema.pre('save', function (next) {
 	next();
 });
 
-categorySchema.index({ slug: 1 });
-categorySchema.index({ title: 1 });
 categorySchema.index({ serialNo: 1 });
 categorySchema.index({ deletedAt: 1 });
 categorySchema.index({ isActive: 1 });

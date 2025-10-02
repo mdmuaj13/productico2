@@ -72,7 +72,7 @@ export function StockForm({ onSuccess }: StockFormProps) {
 	const warehouses = warehousesData?.data || [];
 
 	// Get selected product to show variants
-	const selectedProduct = products.find((p) => p._id === formData.productId);
+	const selectedProduct = products.find((p: { _id: string }) => p._id === formData.productId);
 	const variants = selectedProduct?.variants || [];
 
 	// Initialize variant stocks when product changes
@@ -82,7 +82,7 @@ export function StockForm({ onSuccess }: StockFormProps) {
 				// Product has variants - create entry for each variant
 				setFormData((prev) => ({
 					...prev,
-					variantStocks: variants.map((variant) => ({
+					variantStocks: variants.map((variant: { name: string }) => ({
 						variantName: variant.name,
 						quantity: 0,
 						reorderPoint: 10,
@@ -189,7 +189,7 @@ export function StockForm({ onSuccess }: StockFormProps) {
 								className="w-full justify-between"
 							>
 								{formData.productId
-									? products.find((product) => product._id === formData.productId)
+									? products.find((product: { _id: string; title: string }) => product._id === formData.productId)
 											?.title
 									: 'Select a product'}
 								<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -201,7 +201,7 @@ export function StockForm({ onSuccess }: StockFormProps) {
 								<CommandList>
 									<CommandEmpty>No product found.</CommandEmpty>
 									<CommandGroup>
-										{products.map((product) => (
+										{products.map((product: { _id: string; title: string }) => (
 											<CommandItem
 												key={product._id}
 												value={product.title}
@@ -239,7 +239,7 @@ export function StockForm({ onSuccess }: StockFormProps) {
 							<SelectValue placeholder="Select a warehouse" />
 						</SelectTrigger>
 						<SelectContent className="w-full">
-							{warehouses.map((warehouse) => (
+							{warehouses.map((warehouse: { _id: string; title: string }) => (
 								<SelectItem key={warehouse._id} value={warehouse._id}>
 									{warehouse.title}
 								</SelectItem>

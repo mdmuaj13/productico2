@@ -119,7 +119,7 @@ export function StocksList() {
 		{
 			key: 'warehouseId',
 			header: 'Warehouse',
-			render: (value: unknown) => (value as Warehouse).title,
+			render: (value: unknown) => <span>{(value as Warehouse).title}</span>,
 		},
 		{
 			key: 'quantity',
@@ -140,12 +140,12 @@ export function StocksList() {
 		{
 			key: 'reorderPoint',
 			header: 'Reorder Point',
-			render: (value: unknown) => value || 10,
+			render: (value: unknown) => <span>{(value as number) || 10}</span>,
 		},
 		{
 			key: 'updatedAt',
 			header: 'Last Updated',
-			render: (value: unknown) => new Date(String(value)).toLocaleDateString(),
+			render: (value: unknown) => <span>{new Date(String(value)).toLocaleDateString()}</span>,
 		},
 	];
 

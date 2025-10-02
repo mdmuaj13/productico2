@@ -59,7 +59,6 @@ productSchema.pre('save', function (next) {
 	next();
 });
 
-productSchema.index({ slug: 1 });
 productSchema.index({ categoryId: 1 });
 productSchema.index({ tags: 1 });
 productSchema.index({ deletedAt: 1 });
