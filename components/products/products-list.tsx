@@ -15,6 +15,12 @@ import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import { Spinner } from '../ui/shadcn-io/spinner';
 
 
+interface Variant {
+	name: string;
+	price: number;
+	salePrice?: number;
+}
+
 interface Product {
 	_id: string;
 	title: string;
@@ -29,7 +35,7 @@ interface Product {
 	salePrice?: number;
 	unit: string;
 	tags: string[];
-	variants: Record<string, unknown>[];
+	variants: Variant[];
 	createdAt: string;
 	updatedAt: string;
 }
