@@ -14,7 +14,7 @@ import {
 	SheetFooter,
 	SheetClose,
 } from '@/components/ui/sheet';
-import { Plus, X } from 'lucide-react';
+import { Plus, X, Pencil } from 'lucide-react';
 import { updateProduct } from '@/hooks/products';
 import { toast } from 'sonner';
 import { useApi } from '@/lib/api';
@@ -88,6 +88,7 @@ export function ProductEditForm({
 	});
 
 	const [newVariant, setNewVariant] = useState<Variant>({ name: '', price: 0 });
+	const [editingVariantIndex, setEditingVariantIndex] = useState<number | null>(null);
 
 	const { data: categoriesData } = useApi('/api/categories');
 	const categories = categoriesData?.data || [];
@@ -103,12 +104,32 @@ export function ProductEditForm({
 
 	const addVariant = () => {
 		if (newVariant.name.trim() && newVariant.price > 0) {
-			setFormData(prev => ({
-				...prev,
-				variants: [...prev.variants, { ...newVariant }]
-			}))
+			if (editingVariantIndex !== null) {
+				// Update existing variant
+				setFormData(prev => ({
+					...prev,
+					variants: prev.variants.map((v, i) => i === editingVariantIndex ? { ...newVariant } : v)
+				}))
+				setEditingVariantIndex(null)
+			} else {
+				// Add new variant
+				setFormData(prev => ({
+					...prev,
+					variants: [...prev.variants, { ...newVariant }]
+				}))
+			}
 			setNewVariant({ name: '', price: 0 })
 		}
+	}
+
+	const editVariant = (index: number) => {
+		setNewVariant({ ...formData.variants[index] })
+		setEditingVariantIndex(index)
+	}
+
+	const cancelEditVariant = () => {
+		setNewVariant({ name: '', price: 0 })
+		setEditingVariantIndex(null)
 	}
 
 	const removeVariant = (index: number) => {
@@ -116,6 +137,9 @@ export function ProductEditForm({
 			...prev,
 			variants: prev.variants.filter((_, i) => i !== index)
 		}))
+		if (editingVariantIndex === index) {
+			cancelEditVariant()
+		}
 	}
 
 	const handleSubmit = async (e: React.FormEvent) => {
@@ -139,9 +163,6 @@ export function ProductEditForm({
 		<div className="flex flex-col h-full">
 			<SheetHeader className="px-4 pb-4">
 				<SheetTitle>Edit Product</SheetTitle>
-				<SheetDescription>
-					Update the product information below.
-				</SheetDescription>
 			</SheetHeader>
 
 			<form onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-4 space-y-4 pb-4">
@@ -277,29 +298,47 @@ export function ProductEditForm({
 										/>
 									</div>
 								</div>
-								<Button type="button" onClick={addVariant} className="w-full">
-									<Plus className="h-4 w-4 mr-2" />
-									Add Variant
-								</Button>
+								<div className="flex gap-2">
+									<Button type="button" onClick={addVariant} className="flex-1">
+										<Plus className="h-4 w-4 mr-2" />
+										{editingVariantIndex !== null ? 'Update Variant' : 'Add Variant'}
+									</Button>
+									{editingVariantIndex !== null && (
+										<Button type="button" onClick={cancelEditVariant} variant="outline">
+											Cancel
+										</Button>
+									)}
+								</div>
 							</div>
 							{formData.variants.length > 0 && (
 								<div className="space-y-2">
 									<Label>Added Variants</Label>
 									<div className="space-y-2">
 										{formData.variants.map((variant, index) => (
-											<div key={index} className="flex items-center justify-between p-3 border rounded-lg bg-muted/50">
+											<div key={index} className={`flex items-center justify-between p-3 border rounded-lg ${editingVariantIndex === index ? 'bg-primary/10 border-primary' : 'bg-muted/50'}`}>
 												<span className="text-sm">
 													<span className="font-medium">{variant.name}</span> - ${variant.price}
 													{variant.salePrice && <span className="text-muted-foreground"> (Sale: ${variant.salePrice})</span>}
 												</span>
-												<Button
-													type="button"
-													variant="ghost"
-													size="sm"
-													onClick={() => removeVariant(index)}
-												>
-													<X className="h-4 w-4" />
-												</Button>
+												<div className="flex gap-1">
+													<Button
+														type="button"
+														variant="ghost"
+														size="sm"
+														onClick={() => editVariant(index)}
+														disabled={editingVariantIndex !== null && editingVariantIndex !== index}
+													>
+														<Pencil className="h-4 w-4" />
+													</Button>
+													<Button
+														type="button"
+														variant="ghost"
+														size="sm"
+														onClick={() => removeVariant(index)}
+													>
+														<X className="h-4 w-4" />
+													</Button>
+												</div>
 											</div>
 										))}
 									</div>

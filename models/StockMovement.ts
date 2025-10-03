@@ -10,7 +10,7 @@ type MovementType =
 
 interface IStockMovement {
 	productId: mongoose.Types.ObjectId;
-	variantId: mongoose.Types.ObjectId | null;
+	variantName: string | null;
 	warehouseId: mongoose.Types.ObjectId;
 	type: MovementType;
 	quantity: number; // Positive for incoming, negative for outgoing
@@ -27,7 +27,7 @@ interface IStockMovement {
 const stockMovementSchema = new Schema<IStockMovement>(
 	{
 		productId: { type: Schema.Types.ObjectId, ref: 'Product', required: true },
-		variantId: { type: Schema.Types.ObjectId, default: null },
+		variantName: { type: String, default: null },
 		warehouseId: {
 			type: Schema.Types.ObjectId,
 			ref: 'Warehouse',

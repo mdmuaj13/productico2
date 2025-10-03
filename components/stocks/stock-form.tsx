@@ -85,7 +85,7 @@ export function StockForm({ onSuccess }: StockFormProps) {
 					variantStocks: variants.map((variant: { name: string }) => ({
 						variantName: variant.name,
 						quantity: 0,
-						reorderPoint: 10,
+						reorderPoint: 0,
 					})),
 				}));
 			} else {
@@ -96,7 +96,7 @@ export function StockForm({ onSuccess }: StockFormProps) {
 						{
 							variantName: null,
 							quantity: 0,
-							reorderPoint: 10,
+							reorderPoint: 0,
 						},
 					],
 				}));
@@ -134,21 +134,18 @@ export function StockForm({ onSuccess }: StockFormProps) {
 		setIsLoading(true);
 
 		try {
-			// Create stock entry for each variant
-			const promises = formData.variantStocks.map((variantStock) =>
-				createStock({
-					productId: formData.productId,
+			// Use bulk API for multiple variants
+			await createStock({
+				productId: formData.productId,
+				warehouseId: formData.warehouseId,
+				variants: formData.variantStocks.map((variantStock) => ({
 					variantName: variantStock.variantName,
-					warehouseId: formData.warehouseId,
 					quantity: variantStock.quantity,
 					reorderPoint: variantStock.reorderPoint,
-				})
-			);
+				})),
+			});
 
-			await Promise.all(promises);
-
-			const count = formData.variantStocks.length;
-			toast.success(`${count} stock ${count === 1 ? 'entry' : 'entries'} created successfully`);
+			toast.success('Stock added successfully');
 
 			// Reset form
 			setFormData({
@@ -304,7 +301,7 @@ export function StockForm({ onSuccess }: StockFormProps) {
 											id={`reorderPoint-${index}`}
 											type="number"
 											min="0"
-											placeholder="10"
+											placeholder="0"
 											value={variantStock.reorderPoint}
 											onChange={(e) =>
 												handleVariantStockChange(

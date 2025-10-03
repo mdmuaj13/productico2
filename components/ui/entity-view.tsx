@@ -15,7 +15,7 @@ import { toast } from 'sonner';
 
 interface EntityViewProps<T> {
 	title: string;
-	description: string;
+	description?: string;
 	entity: T;
 	entityName: string;
 	getEntityDisplayName: (entity: T) => string;
@@ -63,13 +63,12 @@ export function EntityView<T extends { _id: string }>({
 
 	return (
 		<>
-			<div className="flex flex-col h-full space-y-6 px-4 pt-8">
+			<div className="flex flex-col h-full space-y-6 px-4 pt-4">
 				<SheetHeader className="px-0">
 					<SheetTitle>{title}</SheetTitle>
-					<SheetDescription>{description}</SheetDescription>
 				</SheetHeader>
 
-				<div className="flex-1 space-y-6 py-4 overflow-y-auto">
+				<div className="flex-1 space-y-6 pb-2 overflow-y-auto">
 					<div className="grid grid-cols-1 gap-4">{children}</div>
 				</div>
 

@@ -38,10 +38,6 @@ const OrderProductSchema = new Schema({
 		min: 1,
 	},
 	// Variant fields
-	variantId: {
-		type: Schema.Types.ObjectId,
-		default: null, // null means base product (no variant selected)
-	},
 	variantName: {
 		type: String,
 		default: null, // e.g., "Red - Large", "500ml"
