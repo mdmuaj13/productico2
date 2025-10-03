@@ -181,12 +181,21 @@ export function ProductView({
 						{product.variants && product.variants.length > 0 && (
 							<div className="space-y-2">
 								<Label className="text-sm font-medium text-muted-foreground">
-									Variants
+									Variants ({product.variants.length})
 								</Label>
-								<div className="p-3 bg-muted/50 rounded-md">
-									<p className="text-sm">
-										{product.variants.length} variant(s) available
-									</p>
+								<div className="p-3 bg-muted/50 rounded-md space-y-3">
+									{product.variants.map((variant, index) => (
+										<div key={index} className="space-y-1">
+											<p className="text-sm font-medium">{variant.name}</p>
+											<p className="text-sm text-muted-foreground">
+												${variant.price}
+												{variant.salePrice && ` • Sale: $${variant.salePrice}`}
+											</p>
+											{index < product.variants.length - 1 && (
+												<div className="pt-2 border-b border-border/50" />
+											)}
+										</div>
+									))}
 								</div>
 							</div>
 						)}

@@ -139,6 +139,14 @@ export function ProductsList() {
 			header: 'Unit',
 		},
 		{
+			key: 'variants',
+			header: 'Variants',
+			render: (value: unknown) => {
+				const variants = value as Product['variants'];
+				return variants && variants.length > 0 ? `${variants.length}` : '0';
+			},
+		},
+		{
 			key: 'createdAt',
 			header: 'Created',
 			render: (value: unknown) => new Date(String(value)).toLocaleDateString(),

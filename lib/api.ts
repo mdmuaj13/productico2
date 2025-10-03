@@ -1,6 +1,14 @@
 import useSWR from 'swr';
 import { useAuthStore } from '../store/store';
 
+const handleUnauthorized = () => {
+	const { logout } = useAuthStore.getState();
+	logout();
+	if (typeof window !== 'undefined') {
+		window.location.href = '/login';
+	}
+};
+
 const fetcher = async (url: string, token?: string) => {
 	const headers: HeadersInit = {
 		'Content-Type': 'application/json',
@@ -11,6 +19,11 @@ const fetcher = async (url: string, token?: string) => {
 	}
 
 	const res = await fetch(url, { headers });
+
+	if (res.status === 401) {
+		handleUnauthorized();
+		throw new Error('Unauthorized');
+	}
 
 	if (!res.ok) {
 		throw new Error('Failed to fetch');
@@ -45,6 +58,11 @@ export const apiCall = async (url: string, options: RequestInit = {}) => {
 		...options,
 		headers,
 	});
+
+	if (res.status === 401) {
+		handleUnauthorized();
+		throw new Error('Unauthorized');
+	}
 
 	return res.json();
 };
