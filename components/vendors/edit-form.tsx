@@ -84,7 +84,7 @@ export function VendorEditForm({ vendor, onSuccess }: VendorEditFormProps) {
 	};
 
 	return (
-		<div className="flex flex-col h-full space-y-6 p-4 py-8">
+		<div className="flex flex-col h-full space-y-6 px-4 pt-8">
 			<SheetHeader className="px-0">
 				<SheetTitle>Edit Vendor</SheetTitle>
 				<SheetDescription>
@@ -92,7 +92,7 @@ export function VendorEditForm({ vendor, onSuccess }: VendorEditFormProps) {
 				</SheetDescription>
 			</SheetHeader>
 
-			<form onSubmit={handleSubmit} className="flex-1 space-y-4 py-4">
+			<form onSubmit={handleSubmit} className="flex-1 space-y-4 py-4 overflow-y-auto">
 				<div className="space-y-2">
 					<Label htmlFor="name">Vendor Name *</Label>
 					<Input

@@ -45,7 +45,7 @@ export function PurchaseOrderView({ purchaseOrder }: PurchaseOrderViewProps) {
 	};
 
 	return (
-		<div className="flex flex-col h-full space-y-6 p-4 py-8">
+		<div className="flex flex-col h-full space-y-6 px-4 pt-8">
 			<SheetHeader className="px-0">
 				<SheetTitle>Purchase Order Details</SheetTitle>
 				<SheetDescription>
@@ -53,7 +53,7 @@ export function PurchaseOrderView({ purchaseOrder }: PurchaseOrderViewProps) {
 				</SheetDescription>
 			</SheetHeader>
 
-			<div className="flex-1 space-y-4 py-4">
+			<div className="flex-1 space-y-4 py-4 overflow-y-auto">
 				<div className="space-y-2">
 					<Label>Title</Label>
 					<div className="w-full p-3 border rounded-md bg-gray-50">

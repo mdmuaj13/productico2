@@ -165,7 +165,7 @@ export function CustomerEditForm({ customer, onSuccess }: CustomerEditFormProps)
 	};
 
 	return (
-		<div className="flex flex-col h-full space-y-6 p-4 py-8">
+		<div className="flex flex-col h-full space-y-6 px-4 pt-8">
 			<SheetHeader className="px-0">
 				<SheetTitle>Edit Customer</SheetTitle>
 				<SheetDescription>

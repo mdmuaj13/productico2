@@ -124,7 +124,7 @@ export function PurchaseOrderEditForm({
 	};
 
 	return (
-		<div className="flex flex-col h-full space-y-6 p-4 py-8">
+		<div className="flex flex-col h-full space-y-6 px-4 pt-8">
 			<SheetHeader className="px-0">
 				<SheetTitle>Edit Purchase Order</SheetTitle>
 				<SheetDescription>
@@ -132,7 +132,7 @@ export function PurchaseOrderEditForm({
 				</SheetDescription>
 			</SheetHeader>
 
-			<form onSubmit={handleSubmit} className="flex-1 space-y-4 py-4">
+			<form onSubmit={handleSubmit} className="flex-1 space-y-4 py-4 overflow-y-auto">
 				<div className="space-y-2">
 					<Label htmlFor="title">Title *</Label>
 					<Input
@@ -223,14 +223,14 @@ export function PurchaseOrderEditForm({
 			</form>
 
 			<SheetFooter className="gap-2 px-0 mt-auto">
+				<Button type="submit" disabled={isLoading} onClick={handleSubmit}>
+					{isLoading ? 'Updating...' : 'Update Purchase Order'}
+				</Button>
 				<SheetClose asChild>
 					<Button type="button" variant="outline" disabled={isLoading}>
 						Cancel
 					</Button>
 				</SheetClose>
-				<Button type="submit" disabled={isLoading} onClick={handleSubmit}>
-					{isLoading ? 'Updating...' : 'Update Purchase Order'}
-				</Button>
 			</SheetFooter>
 		</div>
 	);

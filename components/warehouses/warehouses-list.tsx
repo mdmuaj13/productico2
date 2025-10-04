@@ -5,12 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Plus } from 'lucide-react';
-import { useWarehouses, deleteWarehouse } from '@/hooks/warehouses';
+import { useWarehouses } from '@/hooks/warehouses';
 import { WarehouseForm } from './create';
 import { WarehouseEditForm } from './edit-form';
-import { toast } from 'sonner';
+import { WarehouseView } from './view';
 import { SimpleTable } from '@/components/simple-table';
-import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import { Spinner } from '../ui/shadcn-io/spinner';
 
 interface Warehouse {
@@ -25,15 +24,14 @@ interface Warehouse {
 
 export function WarehousesList() {
 	const [createSheetOpen, setCreateSheetOpen] = useState(false);
+	const [viewSheetOpen, setViewSheetOpen] = useState(false);
 	const [editSheetOpen, setEditSheetOpen] = useState(false);
+	const [selectedWarehouse, setSelectedWarehouse] = useState<Warehouse | null>(
+		null
+	);
 	const [editingWarehouse, setEditingWarehouse] = useState<Warehouse | null>(
 		null
 	);
-	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-	const [deletingWarehouse, setDeletingWarehouse] = useState<Warehouse | null>(
-		null
-	);
-	const [isDeleting, setIsDeleting] = useState(false);
 
 	const {
 		data: warehousesData,
@@ -47,31 +45,28 @@ export function WarehousesList() {
 	const warehouses = warehousesData?.data || [];
 	const meta = warehousesData?.meta;
 
-	const handleDeleteClick = (warehouse: Warehouse) => {
-		setDeletingWarehouse(warehouse);
-		setDeleteDialogOpen(true);
-	};
-
-	const handleDeleteConfirm = async () => {
-		if (!deletingWarehouse) return;
-
-		setIsDeleting(true);
-		try {
-			await deleteWarehouse(deletingWarehouse._id);
-			toast.success('Warehouse deleted successfully');
-			mutateWarehouses();
-		} catch {
-			toast.error('Failed to delete warehouse');
-		} finally {
-			setIsDeleting(false);
-			setDeleteDialogOpen(false);
-			setDeletingWarehouse(null);
-		}
+	const handleViewWarehouse = (warehouse: Warehouse) => {
+		setSelectedWarehouse(warehouse);
+		setViewSheetOpen(true);
 	};
 
 	const handleEditWarehouse = (warehouse: Warehouse) => {
 		setEditingWarehouse(warehouse);
 		setEditSheetOpen(true);
+	};
+
+	const handleEditClickFromView = () => {
+		if (selectedWarehouse) {
+			setEditingWarehouse(selectedWarehouse);
+			setViewSheetOpen(false);
+			setEditSheetOpen(true);
+		}
+	};
+
+	const handleDeleteSuccess = () => {
+		setViewSheetOpen(false);
+		setSelectedWarehouse(null);
+		mutateWarehouses();
 	};
 
 	const handleCreateSuccess = () => {
@@ -106,13 +101,18 @@ export function WarehousesList() {
 
 	const actions = [
 		{
+			label: 'View',
+			onClick: (warehouse: Warehouse) => handleViewWarehouse(warehouse),
+			variant: 'outline' as const,
+		},
+		{
 			label: 'Edit',
 			onClick: (warehouse: Warehouse) => handleEditWarehouse(warehouse),
 			variant: 'outline' as const,
 		},
 		{
 			label: 'Delete',
-			onClick: (warehouse: Warehouse) => handleDeleteClick(warehouse),
+			onClick: (warehouse: Warehouse) => handleViewWarehouse(warehouse),
 			variant: 'destructive' as const,
 		},
 	];
@@ -185,6 +185,21 @@ export function WarehousesList() {
 				</CardContent>
 			</Card>
 
+			{/* View Sheet */}
+			<Sheet open={viewSheetOpen} onOpenChange={setViewSheetOpen}>
+				<SheetContent>
+					<div className="h-full">
+						{selectedWarehouse && (
+							<WarehouseView
+								warehouse={selectedWarehouse}
+								onEdit={handleEditClickFromView}
+								onSuccess={handleDeleteSuccess}
+							/>
+						)}
+					</div>
+				</SheetContent>
+			</Sheet>
+
 			{/* Edit Sheet */}
 			<Sheet open={editSheetOpen} onOpenChange={setEditSheetOpen}>
 				<SheetContent>
@@ -198,19 +213,6 @@ export function WarehousesList() {
 					</div>
 				</SheetContent>
 			</Sheet>
-
-			{/* Delete Confirmation Dialog */}
-			<ConfirmationDialog
-				open={deleteDialogOpen}
-				onOpenChange={setDeleteDialogOpen}
-				onConfirm={handleDeleteConfirm}
-				title="Delete Warehouse"
-				description={`Are you sure you want to delete "${deletingWarehouse?.title}"? This action cannot be undone.`}
-				confirmText="Delete"
-				cancelText="Cancel"
-				variant="destructive"
-				isLoading={isDeleting}
-			/>
 		</div>
 	);
 }
