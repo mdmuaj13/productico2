@@ -92,3 +92,13 @@ export const deleteStock = async (id: string) => {
 		method: 'DELETE',
 	});
 };
+
+export const adjustStock = async (id: string, data: {
+	quantity: number;
+	reason: string;
+}) => {
+	return apiCall(`/api/stocks/${id}/adjust`, {
+		method: 'PATCH',
+		body: JSON.stringify(data),
+	});
+};

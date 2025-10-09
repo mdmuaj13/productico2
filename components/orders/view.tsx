@@ -4,9 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Order } from '@/types/order';
+import { Order } from '@/hooks/orders';
 import { SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Edit, Package } from 'lucide-react';
+import { Edit, Package, User, MapPin, Phone, Mail } from 'lucide-react';
 
 interface OrderViewProps {
 	order: Order;
@@ -15,7 +15,7 @@ interface OrderViewProps {
 }
 
 export function OrderView({ order, onEdit }: OrderViewProps) {
-	const getStatusBadgeVariant = (status: Order['order_status']) => {
+	const getStatusBadgeVariant = (status: Order['status']) => {
 		switch (status) {
 			case 'pending':
 				return 'secondary';
@@ -35,7 +35,7 @@ export function OrderView({ order, onEdit }: OrderViewProps) {
 	};
 
 	const getPaymentStatusBadgeVariant = (
-		status: Order['order_payment_status']
+		status: Order['paymentStatus']
 	) => {
 		switch (status) {
 			case 'unpaid':
@@ -50,13 +50,13 @@ export function OrderView({ order, onEdit }: OrderViewProps) {
 	};
 
 	return (
-		<div className="h-full overflow-y-auto">
+		<div className="h-full overflow-y-auto pb-6">
 			<SheetHeader className="mb-6">
 				<div className="flex items-start justify-between">
 					<div>
-						<SheetTitle>Order Details</SheetTitle>
-						<p className="text-sm text-muted-foreground mt-1">
-							{order.order_code}
+						<SheetTitle className="text-2xl">Order Details</SheetTitle>
+						<p className="text-sm text-muted-foreground mt-1 font-mono">
+							{order.code}
 						</p>
 					</div>
 					<Button onClick={onEdit} size="sm" variant="outline">
@@ -66,32 +66,33 @@ export function OrderView({ order, onEdit }: OrderViewProps) {
 				</div>
 			</SheetHeader>
 
-			<div className="space-y-6">
+			<div className="space-y-4">
 				{/* Status Badges */}
-				<Card>
-					<CardContent className="pt-6">
+				<Card className="border-l-4 border-l-primary">
+					<CardContent className="pt-4">
 						<div className="flex items-center gap-4">
 							<div>
-								<p className="text-sm text-muted-foreground mb-1">
+								<p className="text-xs text-muted-foreground mb-1">
 									Order Status
 								</p>
-								<Badge variant={getStatusBadgeVariant(order.order_status)}>
-									{order.order_status.charAt(0).toUpperCase() +
-										order.order_status.slice(1)}
+								<Badge variant={getStatusBadgeVariant(order.status)} className="text-sm">
+									{order.status.charAt(0).toUpperCase() +
+										order.status.slice(1)}
 								</Badge>
 							</div>
-							<Separator orientation="vertical" className="h-12" />
+							<Separator orientation="vertical" className="h-10" />
 							<div>
-								<p className="text-sm text-muted-foreground mb-1">
+								<p className="text-xs text-muted-foreground mb-1">
 									Payment Status
 								</p>
 								<Badge
 									variant={getPaymentStatusBadgeVariant(
-										order.order_payment_status
+										order.paymentStatus
 									)}
+									className="text-sm"
 								>
-									{order.order_payment_status.charAt(0).toUpperCase() +
-										order.order_payment_status.slice(1)}
+									{order.paymentStatus.charAt(0).toUpperCase() +
+										order.paymentStatus.slice(1)}
 								</Badge>
 							</div>
 						</div>
@@ -99,82 +100,94 @@ export function OrderView({ order, onEdit }: OrderViewProps) {
 				</Card>
 
 				{/* Customer Information */}
-				<Card>
-					<CardHeader>
-						<CardTitle className="text-lg">Customer Information</CardTitle>
+				<Card className="border-l-4 border-l-blue-500">
+					<CardHeader className="pb-3">
+						<CardTitle className="text-base flex items-center gap-2">
+							<User className="h-4 w-4" />
+							Customer Information
+						</CardTitle>
 					</CardHeader>
 					<CardContent className="space-y-3">
-						<div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-							<div>
-								<p className="text-muted-foreground">Name</p>
-								<p className="font-medium">{order.name}</p>
+						<div className="space-y-2">
+							<div className="flex items-start gap-2">
+								<User className="h-4 w-4 text-muted-foreground mt-0.5" />
+								<div className="flex-1">
+									<p className="text-xs text-muted-foreground">Name</p>
+									<p className="text-sm font-medium">{order.customerName}</p>
+								</div>
 							</div>
-							<div>
-								<p className="text-muted-foreground">Contact</p>
-								<p className="font-medium">{order.contact_number}</p>
+							<div className="flex items-start gap-2">
+								<Phone className="h-4 w-4 text-muted-foreground mt-0.5" />
+								<div className="flex-1">
+									<p className="text-xs text-muted-foreground">Contact</p>
+									<p className="text-sm font-medium">{order.customerMobile}</p>
+								</div>
 							</div>
-							{order.email && (
-								<div className="col-span-2">
-									<p className="text-muted-foreground">Email</p>
-									<p className="font-medium">{order.email}</p>
+							{order.customerEmail && (
+								<div className="flex items-start gap-2">
+									<Mail className="h-4 w-4 text-muted-foreground mt-0.5" />
+									<div className="flex-1">
+										<p className="text-xs text-muted-foreground">Email</p>
+										<p className="text-sm font-medium">{order.customerEmail}</p>
+									</div>
 								</div>
 							)}
-							<div className="col-span-2">
-								<p className="text-muted-foreground">Address</p>
-								<p className="font-medium">{order.address}</p>
-							</div>
-							<div>
-								<p className="text-muted-foreground">City</p>
-								<p className="font-medium">{order.city}</p>
+							<div className="flex items-start gap-2">
+								<MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
+								<div className="flex-1">
+									<p className="text-xs text-muted-foreground">Address</p>
+									<p className="text-sm font-medium">{order.customerAddress}</p>
+									{order.customerDistrict && (
+										<p className="text-xs text-muted-foreground mt-1">
+											{order.customerDistrict}
+										</p>
+									)}
+								</div>
 							</div>
 						</div>
 					</CardContent>
 				</Card>
 
 				{/* Products */}
-				<Card>
-					<CardHeader>
-						<CardTitle className="text-lg flex items-center">
-							<Package className="h-5 w-5 mr-2" />
+				<Card className="border-l-4 border-l-green-500">
+					<CardHeader className="pb-3">
+						<CardTitle className="text-base flex items-center gap-2">
+							<Package className="h-4 w-4" />
 							Products ({order.products.length})
 						</CardTitle>
 					</CardHeader>
 					<CardContent>
-						<div className="space-y-4">
+						<div className="space-y-3">
 							{order.products.map((product, index) => (
 								<div
-									key={product.id}
-									className={`pb-4 ${
+									key={index}
+									className={`pb-3 ${
 										index !== order.products.length - 1 ? 'border-b' : ''
 									}`}
 								>
 									<div className="flex justify-between items-start mb-2">
-										<div>
-											<p className="font-medium">{product.title}</p>
-											{product.slug && (
-												<p className="text-sm text-muted-foreground">
-													{product.slug}
-												</p>
+										<div className="flex-1">
+											<p className="font-medium text-sm">{product.title}</p>
+											{product.variantName && (
+												<Badge variant="secondary" className="text-xs mt-1">
+													{product.variantName}
+												</Badge>
 											)}
 										</div>
-										<p className="font-semibold">৳{product.lineTotal.toFixed(2)}</p>
+										<p className="font-semibold text-sm">৳{product.lineTotal.toFixed(2)}</p>
 									</div>
-									<div className="grid grid-cols-3 gap-2 text-sm">
+									<div className="grid grid-cols-3 gap-2 text-xs">
 										<div>
 											<p className="text-muted-foreground">Price</p>
-											<p>৳{product.price.toFixed(2)}</p>
+											<p className="font-medium">৳{product.price.toFixed(2)}</p>
 										</div>
-										{product.salePrice && product.salePrice > 0 && (
-											<div>
-												<p className="text-muted-foreground">Sale Price</p>
-												<p className="text-green-600">
-													৳{product.salePrice.toFixed(2)}
-												</p>
-											</div>
-										)}
 										<div>
 											<p className="text-muted-foreground">Quantity</p>
-											<p>{product.quantity}</p>
+											<p className="font-medium">{product.quantity}</p>
+										</div>
+										<div>
+											<p className="text-muted-foreground">Line Total</p>
+											<p className="font-medium">৳{product.lineTotal.toFixed(2)}</p>
 										</div>
 									</div>
 								</div>
@@ -184,59 +197,60 @@ export function OrderView({ order, onEdit }: OrderViewProps) {
 				</Card>
 
 				{/* Financial Summary */}
-				<Card>
-					<CardHeader>
-						<CardTitle className="text-lg">Financial Summary</CardTitle>
+				<Card className="border-l-4 border-l-amber-500">
+					<CardHeader className="pb-3">
+						<CardTitle className="text-base">Financial Summary</CardTitle>
 					</CardHeader>
 					<CardContent>
-						<div className="space-y-3">
+						<div className="space-y-2">
 							<div className="flex justify-between text-sm">
 								<span className="text-muted-foreground">Subtotal</span>
-								<span>
-									৳
-									{order.products
-										.reduce((sum, p) => sum + p.lineTotal, 0)
-										.toFixed(2)}
-								</span>
+								<span>৳{order.subTotal.toFixed(2)}</span>
 							</div>
 
-							{order.discount_amount > 0 && (
+							{order.discount > 0 && (
 								<div className="flex justify-between text-sm">
-									<span className="text-muted-foreground">
-										Discount
-										{order.discount_code && ` (${order.discount_code})`}
-									</span>
+									<span className="text-muted-foreground">Discount</span>
 									<span className="text-green-600">
-										-৳{order.discount_amount.toFixed(2)}
+										-৳{order.discount.toFixed(2)}
 									</span>
 								</div>
 							)}
 
-							{order.delivery_cost > 0 && (
+							{order.deliveryCost > 0 && (
 								<div className="flex justify-between text-sm">
 									<span className="text-muted-foreground">Delivery Cost</span>
-									<span>+৳{order.delivery_cost.toFixed(2)}</span>
+									<span>+৳{order.deliveryCost.toFixed(2)}</span>
+								</div>
+							)}
+
+							{order.tax > 0 && (
+								<div className="flex justify-between text-sm">
+									<span className="text-muted-foreground">Tax</span>
+									<span>+৳{order.tax.toFixed(2)}</span>
 								</div>
 							)}
 
 							<Separator />
 
-							<div className="flex justify-between font-semibold">
-								<span>Order Amount</span>
-								<span>৳{order.order_amount.toFixed(2)}</span>
+							<div className="flex justify-between font-semibold bg-accent/50 px-3 py-2 rounded-md">
+								<span>Total Amount</span>
+								<span className="text-primary">৳{order.total.toFixed(2)}</span>
 							</div>
+
+							<Separator />
 
 							<div className="flex justify-between text-sm">
 								<span className="text-muted-foreground">Paid Amount</span>
-								<span className="text-green-600 font-medium">
-									৳{order.paid_amount.toFixed(2)}
+								<span className="text-green-600 font-semibold">
+									৳{order.paid.toFixed(2)}
 								</span>
 							</div>
 
 							<div className="flex justify-between text-sm">
-								<span className="text-muted-foreground">Due Amount</span>
-								<span className="text-red-600 font-medium">
-									৳{order.due_amount.toFixed(2)}
+								<span className="font-medium">Due Amount</span>
+								<span className={order.due > 0 ? 'text-red-600 font-semibold' : 'text-green-600 font-semibold'}>
+									৳{order.due.toFixed(2)}
 								</span>
 							</div>
 						</div>
@@ -245,31 +259,33 @@ export function OrderView({ order, onEdit }: OrderViewProps) {
 
 				{/* Order Information */}
 				<Card>
-					<CardHeader>
-						<CardTitle className="text-lg">Order Information</CardTitle>
+					<CardHeader className="pb-3">
+						<CardTitle className="text-base">Order Information</CardTitle>
 					</CardHeader>
 					<CardContent className="space-y-3">
-						<div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+						<div className="grid grid-cols-2 gap-3 text-sm">
 							<div>
-								<p className="text-muted-foreground">Order Date</p>
+								<p className="text-xs text-muted-foreground">Payment Type</p>
+								<p className="font-medium capitalize">{order.paymentType}</p>
+							</div>
+							<div>
+								<p className="text-xs text-muted-foreground">Created At</p>
 								<p className="font-medium">
-									{new Date(order.order_date).toLocaleDateString()}
+									{new Date(order.createdAt).toLocaleString()}
 								</p>
 							</div>
-							{order.createdAt && (
-								<div>
-									<p className="text-muted-foreground">Created At</p>
-									<p className="font-medium">
-										{new Date(order.createdAt).toLocaleString()}
-									</p>
+							{order.trackingCode && (
+								<div className="col-span-2">
+									<p className="text-xs text-muted-foreground">Tracking Code</p>
+									<p className="font-medium font-mono">{order.trackingCode}</p>
 								</div>
 							)}
 						</div>
 
 						{order.remark && (
-							<div className="pt-2">
-								<p className="text-muted-foreground text-sm mb-1">Remark</p>
-								<p className="text-sm">{order.remark}</p>
+							<div className="pt-2 border-t">
+								<p className="text-xs text-muted-foreground mb-1">Remark</p>
+								<p className="text-sm bg-accent/50 p-2 rounded-md">{order.remark}</p>
 							</div>
 						)}
 					</CardContent>

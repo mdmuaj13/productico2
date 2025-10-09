@@ -30,7 +30,7 @@ export function NavMain({
 	// Function to check if a navigation item is active
 	const isActive = (url: string) => {
 		// Handle exact matches and nested routes
-		if (url === '/app/dashboard' && pathname === '/app/dashboard') {
+		if (url === '/app/' && pathname === '/app/') {
 			return true;
 		}
 		if (url === '/app/warehouses' && pathname.startsWith('/app/warehouses')) {

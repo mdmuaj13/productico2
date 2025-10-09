@@ -10,59 +10,34 @@ import { OrderView } from './view';
 import { OrderEditForm } from './edit-form';
 import { SimpleTable } from '@/components/simple-table';
 import { Badge } from '@/components/ui/badge';
-import { Order } from '@/types/order';
-
-// Mock data for demonstration
-const mockOrders: Order[] = [
-	{
-		_id: '1',
-		name: 'John Doe',
-		address: '123 Main St, Apt 4B',
-		city: 'Dhaka',
-		contact_number: '01712345678',
-		email: 'john@example.com',
-		order_code: 'ORD-001',
-		order_date: new Date().toISOString(),
-		products: [
-			{
-				id: '1',
-				title: 'Product A',
-				slug: 'product-a',
-				price: 1000,
-				salePrice: 900,
-				quantity: 2,
-				lineTotal: 1800,
-			},
-		],
-		order_amount: 2300,
-		discount_amount: 100,
-		delivery_cost: 100,
-		paid_amount: 1000,
-		due_amount: 1300,
-		order_status: 'pending',
-		order_payment_status: 'partial',
-		remark: 'Urgent delivery',
-		createdAt: new Date().toISOString(),
-		updatedAt: new Date().toISOString(),
-	},
-];
+import { useOrders, Order as OrderType } from '@/hooks/orders';
+import { Spinner } from '@/components/ui/shadcn-io/spinner';
 
 export function OrdersList() {
 	const [createSheetOpen, setCreateSheetOpen] = useState(false);
 	const [editSheetOpen, setEditSheetOpen] = useState(false);
 	const [viewSheetOpen, setViewSheetOpen] = useState(false);
-	const [editingOrder, setEditingOrder] = useState<Order | null>(null);
-	const [viewingOrder, setViewingOrder] = useState<Order | null>(null);
+	const [editingOrder, setEditingOrder] = useState<OrderType | null>(null);
+	const [viewingOrder, setViewingOrder] = useState<OrderType | null>(null);
 
-	// TODO: Replace with actual API call
-	const orders = mockOrders;
+	const {
+		data: ordersData,
+		error,
+		mutate: mutateOrders,
+	} = useOrders({
+		page: 1,
+		limit: 100,
+	});
 
-	const handleViewOrder = (order: Order) => {
+	const orders = ordersData?.data || [];
+	const meta = ordersData?.meta;
+
+	const handleViewOrder = (order: OrderType) => {
 		setViewingOrder(order);
 		setViewSheetOpen(true);
 	};
 
-	const handleEditOrder = (order: Order) => {
+	const handleEditOrder = (order: OrderType) => {
 		setEditingOrder(order);
 		setEditSheetOpen(true);
 	};
@@ -77,22 +52,22 @@ export function OrdersList() {
 
 	const handleCreateSuccess = () => {
 		setCreateSheetOpen(false);
-		// TODO: Refresh orders list
+		mutateOrders();
 	};
 
 	const handleEditSuccess = () => {
 		setEditSheetOpen(false);
 		setEditingOrder(null);
-		// TODO: Refresh orders list
+		mutateOrders();
 	};
 
 	const handleViewSuccess = () => {
 		setViewSheetOpen(false);
 		setViewingOrder(null);
-		// TODO: Refresh orders list
+		mutateOrders();
 	};
 
-	const getStatusBadgeVariant = (status: Order['order_status']) => {
+	const getStatusBadgeVariant = (status: OrderType['status']) => {
 		switch (status) {
 			case 'pending':
 				return 'secondary';
@@ -112,7 +87,7 @@ export function OrdersList() {
 	};
 
 	const getPaymentStatusBadgeVariant = (
-		status: Order['order_payment_status']
+		status: OrderType['paymentStatus']
 	) => {
 		switch (status) {
 			case 'unpaid':
@@ -128,62 +103,63 @@ export function OrdersList() {
 
 	const columns = [
 		{
-			key: 'order_code',
+			key: 'code',
 			header: 'Order Code',
 		},
 		{
-			key: 'name',
+			key: 'customerName',
 			header: 'Customer',
 		},
 		{
-			key: 'contact_number',
+			key: 'customerMobile',
 			header: 'Contact',
 		},
 		{
-			key: 'city',
-			header: 'City',
+			key: 'customerDistrict',
+			header: 'District',
+			render: (value: unknown) => value || 'N/A',
 		},
 		{
-			key: 'order_amount',
+			key: 'total',
 			header: 'Amount',
 			render: (value: unknown) => (
 				<span className="font-semibold">৳{Number(value).toFixed(2)}</span>
 			),
 		},
 		{
-			key: 'paid_amount',
+			key: 'paid',
 			header: 'Paid',
 			render: (value: unknown) => (
 				<span className="text-green-600">৳{Number(value).toFixed(2)}</span>
 			),
 		},
 		{
-			key: 'due_amount',
+			key: 'due',
 			header: 'Due',
 			render: (value: unknown) => (
 				<span className="text-red-600">৳{Number(value).toFixed(2)}</span>
 			),
 		},
 		{
-			key: 'order_status',
+			key: 'status',
 			header: 'Status',
-			render: (value: unknown, row: Order) => (
-				<Badge variant={getStatusBadgeVariant(row.order_status)}>
+			render: (value: unknown, row: OrderType) => (
+				<Badge variant={getStatusBadgeVariant(row.status)}>
 					{String(value).charAt(0).toUpperCase() + String(value).slice(1)}
 				</Badge>
 			),
 		},
 		{
-			key: 'order_payment_status',
+			key: 'paymentStatus',
 			header: 'Payment',
-			render: (value: unknown, row: Order) => (
-				<Badge variant={getPaymentStatusBadgeVariant(row.order_payment_status)}>
+			render: (value: unknown, row: OrderType) => (
+				<Badge variant={getPaymentStatusBadgeVariant(row.paymentStatus)}>
 					{String(value).charAt(0).toUpperCase() + String(value).slice(1)}
 				</Badge>
 			),
 		},
 		{
-			key: 'order_date',
+			key: 'createdAt',
 			header: 'Date',
 			render: (value: unknown) => new Date(String(value)).toLocaleDateString(),
 		},
@@ -192,20 +168,30 @@ export function OrdersList() {
 	const actions = [
 		{
 			label: 'View',
-			onClick: (order: Order) => handleViewOrder(order),
+			onClick: (order: OrderType) => handleViewOrder(order),
 			variant: 'secondary' as const,
 		},
 		{
 			label: 'Edit',
-			onClick: (order: Order) => handleEditOrder(order),
+			onClick: (order: OrderType) => handleEditOrder(order),
 			variant: 'outline' as const,
 		},
 	];
 
+	if (error) {
+		return (
+			<Card>
+				<CardContent className="p-6">
+					<p className="text-center text-red-500">Failed to load orders</p>
+				</CardContent>
+			</Card>
+		);
+	}
+
 	return (
 		<div className="space-y-6">
 			<div className="flex items-center justify-between">
-				<h1 className="text-2xl font-bold">Orders ({orders.length})</h1>
+				<h1 className="text-2xl font-bold">Orders ({meta?.total || 0})</h1>
 				<div className="flex items-center gap-2">
 					<Sheet open={createSheetOpen} onOpenChange={setCreateSheetOpen}>
 						<SheetTrigger asChild>
@@ -226,9 +212,13 @@ export function OrdersList() {
 			{/* Orders Table */}
 			<Card>
 				<CardContent>
-					{orders.length === 0 ? (
+					{!ordersData && !error ? (
 						<div className="flex items-center justify-center py-8">
-							<p>No orders found</p>
+							<Spinner variant="pinwheel" />
+						</div>
+					) : orders.length === 0 ? (
+						<div className="flex items-center justify-center py-8">
+							<p>No orders found. Create your first order to get started.</p>
 						</div>
 					) : (
 						<SimpleTable

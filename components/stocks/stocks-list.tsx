@@ -4,10 +4,11 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Plus } from 'lucide-react';
+import { Plus, Minus } from 'lucide-react';
 import { useStocks, deleteStock } from '@/hooks/stocks';
 import { StockForm } from './stock-form';
 import { StockEditForm } from './stock-edit-form';
+import { StockAdjustForm } from './stock-adjust-form';
 import { toast } from 'sonner';
 import { SimpleTable } from '@/components/simple-table';
 import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
@@ -51,6 +52,7 @@ export function StocksList() {
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 	const [deletingStock, setDeletingStock] = useState<Stock | null>(null);
 	const [isDeleting, setIsDeleting] = useState(false);
+	const [adjustSheetOpen, setAdjustSheetOpen] = useState(false);
 
 	const {
 		data: stocksData,
@@ -99,6 +101,11 @@ export function StocksList() {
 	const handleEditSuccess = () => {
 		setEditSheetOpen(false);
 		setEditingStock(null);
+		mutateStocks();
+	};
+
+	const handleAdjustSuccess = () => {
+		setAdjustSheetOpen(false);
 		mutateStocks();
 	};
 
@@ -177,6 +184,19 @@ export function StocksList() {
 			<div className="flex items-center justify-between">
 				<h1 className="text-2xl font-bold">Stock Management ({meta?.total || 0})</h1>
 				<div className="flex items-center gap-2">
+					<Sheet open={adjustSheetOpen} onOpenChange={setAdjustSheetOpen}>
+						<SheetTrigger asChild>
+							<Button variant="outline">
+								<Minus className="h-4 w-4 mr-2" />
+								Adjust Stock
+							</Button>
+						</SheetTrigger>
+						<SheetContent>
+							<div className="h-full">
+								<StockAdjustForm onSuccess={handleAdjustSuccess} />
+							</div>
+						</SheetContent>
+					</Sheet>
 					<Sheet open={createSheetOpen} onOpenChange={setCreateSheetOpen}>
 						<SheetTrigger asChild>
 							<Button>
