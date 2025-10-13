@@ -19,7 +19,7 @@ export async function GET(
 		}
 
 		return ApiSerializer.success(test, 'Data retrieved successfully');
-	} catch (error) {
+	} catch {
 		return ApiSerializer.error('Failed to fetch data');
 	}
 }
@@ -42,7 +42,7 @@ export async function PUT(
 		}
 
 		return ApiSerializer.success(test, 'Data updated successfully');
-	} catch (error) {
+	} catch {
 		return ApiSerializer.error('Failed to update data');
 	}
 }
@@ -63,7 +63,7 @@ export async function DELETE(
 		}
 
 		return ApiSerializer.success(null, 'Data deleted successfully');
-	} catch (error) {
+	} catch {
 		return ApiSerializer.error('Failed to delete data');
 	}
 }

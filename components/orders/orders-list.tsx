@@ -117,7 +117,7 @@ export function OrdersList() {
 		{
 			key: 'customerDistrict',
 			header: 'District',
-			render: (value: unknown) => value || 'N/A',
+			render: (value: unknown) => (<span>{String(value) || 'N/A'}</span>),
 		},
 		{
 			key: 'total',
@@ -161,7 +161,7 @@ export function OrdersList() {
 		{
 			key: 'createdAt',
 			header: 'Date',
-			render: (value: unknown) => new Date(String(value)).toLocaleDateString(),
+			render: (value: unknown) => (<span>{new Date(String(value)).toLocaleDateString()}</span>),
 		},
 	];
 

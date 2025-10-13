@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
 import Order from '@/models/Order';
+import User from '@/models/User';
+import { createOrderSchema } from '@/lib/validations/order';
+
+// Ensure User model is registered for populate
+void User;
 
 // GET /api/orders - List orders
 export async function GET(request: NextRequest) {
@@ -17,7 +22,7 @@ export async function GET(request: NextRequest) {
 		const skip = (page - 1) * limit;
 
 		// Build query
-		const query: any = { deletedAt: null };
+		const query: Record<string, unknown> = { deletedAt: null };
 
 		if (search) {
 			query.$or = [
@@ -70,30 +75,26 @@ export async function POST(request: NextRequest) {
 
 		const body = await request.json();
 
-		// Validate required fields
-		if (!body.customerName || !body.customerMobile || !body.customerAddress) {
+		// Validate with Zod
+		const validationResult = createOrderSchema.safeParse(body);
+
+		if (!validationResult.success) {
 			return NextResponse.json(
-				{ error: 'Customer name, mobile, and address are required' },
+				{
+					error: 'Validation failed',
+					details: validationResult.error.issues.map(err => ({
+						field: err.path.join('.'),
+						message: err.message
+					}))
+				},
 				{ status: 400 }
 			);
 		}
 
-		if (!body.products || body.products.length === 0) {
-			return NextResponse.json(
-				{ error: 'At least one product is required' },
-				{ status: 400 }
-			);
-		}
-
-		if (!body.code) {
-			return NextResponse.json(
-				{ error: 'Order code is required' },
-				{ status: 400 }
-			);
-		}
+		const validatedData = validationResult.data;
 
 		// Check if order code already exists
-		const existingOrder = await Order.findOne({ code: body.code });
+		const existingOrder = await Order.findOne({ code: validatedData.code });
 		if (existingOrder) {
 			return NextResponse.json(
 				{ error: 'Order code already exists' },
@@ -102,36 +103,36 @@ export async function POST(request: NextRequest) {
 		}
 
 		// Calculate totals
-		const subTotal = body.products.reduce(
-			(sum: number, product: any) => sum + product.lineTotal,
+		const subTotal = validatedData.products.reduce(
+			(sum: number, product: { lineTotal: number }) => sum + product.lineTotal,
 			0
 		);
 
-		const total = subTotal - (body.discount || 0) + (body.deliveryCost || 0) + (body.tax || 0);
-		const due = total - (body.paid || 0);
+		const total = subTotal - validatedData.discount + validatedData.deliveryCost + validatedData.tax;
+		const due = total - validatedData.paid;
 
 		// Create order
 		const order = await Order.create({
-			customerName: body.customerName,
-			customerMobile: body.customerMobile,
-			customerEmail: body.customerEmail,
-			customerAddress: body.customerAddress,
-			customerDistrict: body.customerDistrict,
-			code: body.code,
-			trackingCode: body.trackingCode,
-			products: body.products,
+			customerName: validatedData.customerName,
+			customerMobile: validatedData.customerMobile,
+			customerEmail: validatedData.customerEmail,
+			customerAddress: validatedData.customerAddress,
+			customerDistrict: validatedData.customerDistrict,
+			code: validatedData.code,
+			trackingCode: validatedData.trackingCode,
+			products: validatedData.products,
 			subTotal,
 			total,
-			discount: body.discount || 0,
-			deliveryCost: body.deliveryCost || 0,
-			tax: body.tax || 0,
-			paid: body.paid || 0,
+			discount: validatedData.discount,
+			deliveryCost: validatedData.deliveryCost,
+			tax: validatedData.tax,
+			paid: validatedData.paid,
 			due,
-			paymentStatus: body.paymentStatus || 'unpaid',
-			paymentType: body.paymentType || 'cash',
-			status: body.status || 'pending',
-			remark: body.remark,
-			createdById: body.createdById,
+			paymentStatus: validatedData.paymentStatus,
+			paymentType: validatedData.paymentType,
+			status: validatedData.status,
+			remark: validatedData.remark,
+			createdById: validatedData.createdById,
 		});
 
 		// Populate the created order
@@ -140,18 +141,22 @@ export async function POST(request: NextRequest) {
 			.lean();
 
 		return NextResponse.json(populatedOrder, { status: 201 });
-	} catch (error: any) {
+	} catch (error: unknown) {
 		console.error('Error creating order:', error);
 
-		if (error.code === 11000) {
+		if (error && typeof error === 'object' && 'code' in error && error.code === 11000) {
 			return NextResponse.json(
 				{ error: 'Order code already exists' },
 				{ status: 400 }
 			);
 		}
 
+		const errorMessage = error && typeof error === 'object' && 'message' in error && typeof error.message === 'string'
+			? error.message
+			: 'Unknown error';
+
 		return NextResponse.json(
-			{ error: 'Failed to create order', details: error.message },
+			{ error: 'Failed to create order', details: errorMessage },
 			{ status: 500 }
 		);
 	}

@@ -17,7 +17,7 @@ export async function GET() {
 		const lastOrder = await Order.findOne({ deletedAt: null })
 			.sort({ createdAt: -1 })
 			.select('createdAt')
-			.lean();
+			.lean() as { createdAt: Date } | null;
 
 		// Get unique customers count based on customer mobile
 		const uniqueCustomers = await Order.aggregate([

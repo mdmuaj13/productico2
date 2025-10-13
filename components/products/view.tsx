@@ -46,7 +46,6 @@ export function ProductView({
 	return (
 		<EntityView
 			title="Product Details"
-			description="View product information and manage actions."
 			entity={product}
 			entityName="Product"
 			getEntityDisplayName={(prod) => prod.title}

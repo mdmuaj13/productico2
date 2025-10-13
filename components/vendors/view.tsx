@@ -31,7 +31,6 @@ export function VendorView({
 	return (
 		<EntityView
 			title="Vendor Details"
-			description="View vendor information and manage actions."
 			entity={vendor}
 			entityName="Vendor"
 			getEntityDisplayName={(v) => v.name}

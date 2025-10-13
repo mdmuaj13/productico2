@@ -107,7 +107,7 @@ export function StockForm({ onSuccess }: StockFormProps) {
 				variantStocks: [],
 			}));
 		}
-	}, [formData.productId, variants.length]);
+	}, [formData.productId, variants]);
 
 	const handleChange = (name: string, value: string) => {
 		setFormData((prev) => ({
@@ -138,11 +138,9 @@ export function StockForm({ onSuccess }: StockFormProps) {
 			await createStock({
 				productId: formData.productId,
 				warehouseId: formData.warehouseId,
-				variants: formData.variantStocks.map((variantStock) => ({
-					variantName: variantStock.variantName,
-					quantity: variantStock.quantity,
-					reorderPoint: variantStock.reorderPoint,
-				})),
+				variantName: formData.variantStocks[0]?.variantName || null,
+				quantity: formData.variantStocks[0]?.quantity || 0,
+				reorderPoint: formData.variantStocks[0]?.reorderPoint,
 			});
 
 			toast.success('Stock added successfully');

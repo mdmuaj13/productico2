@@ -69,11 +69,11 @@ export const useOrders = (params?: {
 
 	const url = `/api/orders${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
 
-	return useApi<OrdersResponse>(url);
+	return useApi(url);
 };
 
 export const useOrder = (id: string) => {
-	return useApi<Order>(`/api/orders/${id}`);
+	return useApi(`/api/orders/${id}`);
 };
 
 export const createOrder = async (data: any) => {

@@ -1,7 +1,7 @@
 import connectDB from '@/lib/db';
 import Test from '@/models/Test';
 import { ApiSerializer } from '@/types';
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 
 export async function GET(request: NextRequest) {
 	try {
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
 		});
 
 		return ApiSerializer.created(test, 'Test created successfully');
-	} catch (error) {
+	} catch {
 		return ApiSerializer.error('Failed to create test');
 	}
 }

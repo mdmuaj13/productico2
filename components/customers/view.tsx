@@ -37,7 +37,6 @@ export function CustomerView({
 	return (
 		<EntityView
 			title="Customer Details"
-			description="View customer information and manage actions."
 			entity={customer}
 			entityName="Customer"
 			getEntityDisplayName={(cust) => cust.name}

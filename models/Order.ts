@@ -54,7 +54,7 @@ const OrderProductSchema = new Schema({
 	warehouseId: {
 		type: Schema.Types.ObjectId,
 		ref: 'Warehouse',
-		required: true,
+		default: null,
 	},
 	// Line total for this item
 	lineTotal: {

@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import {
 	SheetHeader,
 	SheetTitle,
-	SheetDescription,
 	SheetFooter,
 	SheetClose,
 } from '@/components/ui/sheet';
@@ -15,7 +14,6 @@ import { toast } from 'sonner';
 
 interface EntityViewProps<T> {
 	title: string;
-	description?: string;
 	entity: T;
 	entityName: string;
 	getEntityDisplayName: (entity: T) => string;
@@ -28,7 +26,6 @@ interface EntityViewProps<T> {
 
 export function EntityView<T extends { _id: string }>({
 	title,
-	description,
 	entity,
 	entityName,
 	getEntityDisplayName,

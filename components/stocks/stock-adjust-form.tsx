@@ -81,7 +81,7 @@ export function StockAdjustForm({ onSuccess }: StockAdjustFormProps) {
 	const selectedWarehouseId = form.watch('warehouseId');
 	const quantityToDeduct = form.watch('quantity');
 
-	const selectedProduct = products.find((p) => p._id === selectedProductId);
+	const selectedProduct = products.find((p: { _id: string }) => p._id === selectedProductId);
 
 	// Fetch current stock when product, variant, and warehouse are selected
 	const { data: stocksData } = useStocks({
@@ -92,7 +92,7 @@ export function StockAdjustForm({ onSuccess }: StockAdjustFormProps) {
 	useEffect(() => {
 		if (stocksData?.data) {
 			const stock = stocksData.data.find(
-				(s) =>
+				(s: { productId: { _id: string }; variantName: string | null; warehouseId: { _id: string }; quantity: number }) =>
 					s.productId._id === selectedProductId &&
 					s.variantName === selectedVariantName &&
 					s.warehouseId._id === selectedWarehouseId
@@ -116,7 +116,7 @@ export function StockAdjustForm({ onSuccess }: StockAdjustFormProps) {
 		try {
 			// Find the stock ID
 			const stock = stocksData?.data.find(
-				(s) =>
+				(s: { _id: string; productId: { _id: string }; variantName: string | null; warehouseId: { _id: string } }) =>
 					s.productId._id === data.productId &&
 					s.variantName === data.variantName &&
 					s.warehouseId._id === data.warehouseId
@@ -179,7 +179,7 @@ export function StockAdjustForm({ onSuccess }: StockAdjustFormProps) {
 													)}
 												>
 													{field.value
-														? products.find((p) => p._id === field.value)?.title
+														? products.find((p: { _id: string; title: string }) => p._id === field.value)?.title
 														: 'Search product...'}
 													<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
 												</Button>
@@ -191,7 +191,7 @@ export function StockAdjustForm({ onSuccess }: StockAdjustFormProps) {
 												<CommandList>
 													<CommandEmpty>No product found.</CommandEmpty>
 													<CommandGroup>
-														{products.map((product) => (
+														{products.map((product: { _id: string; title: string }) => (
 															<CommandItem
 																key={product._id}
 																value={product.title}
@@ -237,7 +237,7 @@ export function StockAdjustForm({ onSuccess }: StockAdjustFormProps) {
 												value={field.value || ''}
 											>
 												<option value="">Base Product</option>
-												{selectedProduct.variants.map((variant) => (
+												{selectedProduct.variants.map((variant: { name: string }) => (
 													<option key={variant.name} value={variant.name}>
 														{variant.name}
 													</option>
@@ -272,7 +272,7 @@ export function StockAdjustForm({ onSuccess }: StockAdjustFormProps) {
 													)}
 												>
 													{field.value
-														? warehouses.find((w) => w._id === field.value)?.title
+														? warehouses.find((w: { _id: string; title: string }) => w._id === field.value)?.title
 														: 'Search warehouse...'}
 													<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
 												</Button>
@@ -284,7 +284,7 @@ export function StockAdjustForm({ onSuccess }: StockAdjustFormProps) {
 												<CommandList>
 													<CommandEmpty>No warehouse found.</CommandEmpty>
 													<CommandGroup>
-														{warehouses.map((warehouse) => (
+														{warehouses.map((warehouse: { _id: string; title: string }) => (
 															<CommandItem
 																key={warehouse._id}
 																value={warehouse.title}

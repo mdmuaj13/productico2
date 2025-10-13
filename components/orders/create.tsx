@@ -14,13 +14,12 @@ import {
 	SelectValue,
 } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Trash2, Search, Package, DollarSign, Truck, User, ShoppingCart, X } from 'lucide-react';
+import { Plus, Trash2, Search, Package, DollarSign, User, ShoppingCart, X, Minus } from 'lucide-react';
 import { toast } from 'sonner';
 import { OrderFormData } from '@/types/order';
 import { SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useProducts } from '@/hooks/products';
 import { useWarehouses } from '@/hooks/warehouses';
-import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
@@ -35,8 +34,8 @@ interface OrderProductItem {
 	productSlug: string;
 	thumbnail?: string;
 	variantName: string | null;
-	warehouseId: string;
-	warehouseName: string;
+	warehouseId: string | null;
+	warehouseName: string | null;
 	price: number;
 	salePrice?: number;
 	quantity: number;
@@ -99,16 +98,23 @@ export function OrderForm({ onSuccess }: OrderFormProps) {
 	const addProductToOrder = (
 		product: typeof products[0],
 		variantName: string | null,
-		warehouseId: string
+		warehouseId: string | null
 	) => {
-		const warehouse = warehouses.find((w) => w._id === warehouseId);
-		if (!warehouse) {
-			toast.error('Please select a warehouse');
-			return;
+		const actualWarehouseId = warehouseId;
+		let warehouse = null;
+		let warehouseName = null;
+
+		if (warehouseId) {
+			warehouse = warehouses.find((w: { _id: string; title: string }) => w._id === warehouseId);
+			if (!warehouse) {
+				toast.error('Please select a valid warehouse');
+				return;
+			}
+			warehouseName = warehouse.title;
 		}
 
 		const variant = variantName
-			? product.variants.find((v) => v.name === variantName)
+			? product.variants.find((v: { name: string; price: number; salePrice?: number }) => v.name === variantName)
 			: null;
 
 		const price = variant?.price || product.price;
@@ -122,8 +128,8 @@ export function OrderForm({ onSuccess }: OrderFormProps) {
 			productSlug: product.slug,
 			thumbnail: product.thumbnail,
 			variantName,
-			warehouseId,
-			warehouseName: warehouse.title,
+			warehouseId: actualWarehouseId,
+			warehouseName,
 			price,
 			salePrice,
 			quantity: 1,
@@ -164,8 +170,8 @@ export function OrderForm({ onSuccess }: OrderFormProps) {
 
 		setIsSubmitting(true);
 
-		// Transform order products to match backend schema
-		const products = orderProducts.map((p) => ({
+		// Transform order products to match backend schema (ensuring warehouseId is always present)
+		const productsWithWarehouse = orderProducts.map((p) => ({
 			_id: p.productId,
 			slug: p.productSlug,
 			title: p.productTitle,
@@ -187,7 +193,7 @@ export function OrderForm({ onSuccess }: OrderFormProps) {
 			customerAddress: data.address,
 			customerDistrict: data.city,
 			code: data.order_code,
-			products,
+			products: productsWithWarehouse,
 			subTotal,
 			total: orderAmount,
 			discount: watchDiscountAmount || 0,
@@ -216,8 +222,11 @@ export function OrderForm({ onSuccess }: OrderFormProps) {
 
 			toast.success('Order created successfully');
 			onSuccess();
-		} catch (error: any) {
-			toast.error(error.message || 'Failed to create order');
+		} catch (error: unknown) {
+			const errorMessage = error && typeof error === 'object' && 'message' in error && typeof error.message === 'string'
+				? error.message
+				: 'Failed to create order';
+			toast.error(errorMessage);
 			console.error(error);
 		} finally {
 			setIsSubmitting(false);
@@ -234,236 +243,256 @@ export function OrderForm({ onSuccess }: OrderFormProps) {
 			</SheetHeader>
 
 			<form onSubmit={handleSubmit(onSubmit)} className="space-y-6 pb-6">
-				{/* Customer Information */}
-				<Card className="border-l-4 border-l-blue-500">
-					<CardHeader className="pb-3">
-						<CardTitle className="text-base flex items-center gap-2">
-							<User className="h-4 w-4" />
-							Customer Information
-						</CardTitle>
-					</CardHeader>
-					<CardContent className="space-y-3">
-						<div className="grid grid-cols-2 gap-3">
-							<div>
-								<Label htmlFor="name" className="text-xs">
-									Name <span className="text-red-500">*</span>
-								</Label>
-								<Input
-									id="name"
-									{...register('name', { required: 'Name is required' })}
-									placeholder="Customer name"
-									className={cn(errors.name && 'border-red-500')}
-								/>
-								{errors.name && (
-									<p className="text-xs text-red-500 mt-1">
-										{errors.name.message}
-									</p>
-								)}
+				<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+					{/* Customer Information */}
+					<Card>
+						<CardHeader className="pb-3">
+							<div className="flex items-center gap-2">
+								<User className="h-4 w-4" />
+								<CardTitle className="text-base">Customer Information</CardTitle>
 							</div>
-
-							<div>
-								<Label htmlFor="contact_number" className="text-xs">
-									Contact <span className="text-red-500">*</span>
-								</Label>
-								<Input
-									id="contact_number"
-									{...register('contact_number', {
-										required: 'Contact is required',
-									})}
-									placeholder="Phone number"
-									className={cn(errors.contact_number && 'border-red-500')}
-								/>
-								{errors.contact_number && (
-									<p className="text-xs text-red-500 mt-1">
-										{errors.contact_number.message}
-									</p>
-								)}
-							</div>
-						</div>
-
-						<div>
-							<Label htmlFor="email" className="text-xs">Email</Label>
-							<Input
-								id="email"
-								type="email"
-								{...register('email')}
-								placeholder="customer@example.com"
-							/>
-						</div>
-
-						<div>
-							<Label htmlFor="address" className="text-xs">
-								Address <span className="text-red-500">*</span>
-							</Label>
-							<Textarea
-								id="address"
-								{...register('address', { required: 'Address is required' })}
-								placeholder="Delivery address"
-								rows={2}
-								className={cn(errors.address && 'border-red-500')}
-							/>
-							{errors.address && (
-								<p className="text-xs text-red-500 mt-1">
-									{errors.address.message}
-								</p>
-							)}
-						</div>
-
-						<div>
-							<Label htmlFor="city" className="text-xs">
-								City <span className="text-red-500">*</span>
-							</Label>
-							<Input
-								id="city"
-								{...register('city', { required: 'City is required' })}
-								placeholder="City"
-								className={cn(errors.city && 'border-red-500')}
-							/>
-							{errors.city && (
-								<p className="text-xs text-red-500 mt-1">{errors.city.message}</p>
-							)}
-						</div>
-					</CardContent>
-				</Card>
-
-				{/* Order Details */}
-				<Card className="border-l-4 border-l-purple-500">
-					<CardHeader className="pb-3">
-						<CardTitle className="text-base flex items-center gap-2">
-							<Package className="h-4 w-4" />
-							Order Details
-						</CardTitle>
-					</CardHeader>
-					<CardContent className="space-y-3">
-						<div className="grid grid-cols-2 gap-3">
-							<div>
-								<Label htmlFor="order_code" className="text-xs">Order Code</Label>
-								<Input
-									id="order_code"
-									{...register('order_code')}
-									readOnly
-									className="bg-muted font-mono text-xs"
-								/>
-							</div>
-
-							<div>
-								<Label htmlFor="order_date" className="text-xs">Order Date</Label>
-								<Input
-									id="order_date"
-									type="date"
-									value={orderDate}
-									onChange={(e) => {
-										setOrderDate(e.target.value);
-										setValue('order_date', new Date(e.target.value).toISOString());
-									}}
-								/>
-							</div>
-						</div>
-
-						<div className="grid grid-cols-2 gap-3">
-							<div>
-								<Label htmlFor="order_status" className="text-xs">Order Status</Label>
-								<Controller
-									name="order_status"
-									control={control}
-									render={({ field }) => (
-										<Select onValueChange={field.onChange} defaultValue={field.value}>
-											<SelectTrigger>
-												<SelectValue />
-											</SelectTrigger>
-											<SelectContent>
-												<SelectItem value="pending">
-													<Badge variant="outline">Pending</Badge>
-												</SelectItem>
-												<SelectItem value="processing">
-													<Badge variant="outline" className="bg-blue-50">Processing</Badge>
-												</SelectItem>
-												<SelectItem value="confirmed">
-													<Badge variant="outline" className="bg-green-50">Confirmed</Badge>
-												</SelectItem>
-												<SelectItem value="shipped">
-													<Badge variant="outline" className="bg-purple-50">Shipped</Badge>
-												</SelectItem>
-												<SelectItem value="delivered">
-													<Badge variant="outline" className="bg-green-100">Delivered</Badge>
-												</SelectItem>
-												<SelectItem value="cancelled">
-													<Badge variant="outline" className="bg-red-50">Cancelled</Badge>
-												</SelectItem>
-											</SelectContent>
-										</Select>
+						</CardHeader>
+						<CardContent className="space-y-4">
+							<div className="space-y-3">
+								<div>
+									<Label htmlFor="name" className="text-sm">
+										Name <span className="text-red-500">*</span>
+									</Label>
+									<Input
+										id="name"
+										{...register('name', { required: 'Name is required' })}
+										placeholder="Customer name"
+										className={cn(errors.name && 'border-red-500')}
+									/>
+									{errors.name && (
+										<p className="text-xs text-red-500 mt-1">
+											{errors.name.message}
+										</p>
 									)}
-								/>
-							</div>
+								</div>
 
-							<div>
-								<Label htmlFor="order_payment_status" className="text-xs">Payment Status</Label>
-								<Controller
-									name="order_payment_status"
-									control={control}
-									render={({ field }) => (
-										<Select onValueChange={field.onChange} defaultValue={field.value}>
-											<SelectTrigger>
-												<SelectValue />
-											</SelectTrigger>
-											<SelectContent>
-												<SelectItem value="unpaid">
-													<Badge variant="outline" className="bg-red-50">Unpaid</Badge>
-												</SelectItem>
-												<SelectItem value="partial">
-													<Badge variant="outline" className="bg-yellow-50">Partial</Badge>
-												</SelectItem>
-												<SelectItem value="paid">
-													<Badge variant="outline" className="bg-green-50">Paid</Badge>
-												</SelectItem>
-											</SelectContent>
-										</Select>
+								<div className="grid grid-cols-2 gap-3">
+									<div>
+										<Label htmlFor="contact_number" className="text-sm">
+											Contact <span className="text-red-500">*</span>
+										</Label>
+										<Input
+											id="contact_number"
+											{...register('contact_number', {
+												required: 'Contact is required',
+											})}
+											placeholder="Phone number"
+											className={cn(errors.contact_number && 'border-red-500')}
+										/>
+										{errors.contact_number && (
+											<p className="text-xs text-red-500 mt-1">
+												{errors.contact_number.message}
+											</p>
+										)}
+									</div>
+									<div>
+										<Label htmlFor="email" className="text-sm">Email</Label>
+										<Input
+											id="email"
+											type="email"
+											{...register('email')}
+											placeholder="customer@example.com"
+										/>
+									</div>
+								</div>
+
+								<div>
+									<Label htmlFor="address" className="text-sm">
+										Address <span className="text-red-500">*</span>
+									</Label>
+									<Input
+										id="address"
+										{...register('address', { required: 'Address is required' })}
+										placeholder="Delivery address"
+										className={cn(errors.address && 'border-red-500')}
+									/>
+									{errors.address && (
+										<p className="text-xs text-red-500 mt-1">
+											{errors.address.message}
+										</p>
 									)}
-								/>
-							</div>
-						</div>
-					</CardContent>
-				</Card>
+								</div>
 
-				{/* Products */}
-				<Card className="border-l-4 border-l-green-500">
-					<CardHeader className="pb-3">
-						<div className="flex items-center justify-between">
-							<CardTitle className="text-base flex items-center gap-2">
+								<div className="grid grid-cols-2 gap-3">
+									<div>
+										<Label htmlFor="city" className="text-sm">
+											City <span className="text-red-500">*</span>
+										</Label>
+										<Input
+											id="city"
+											{...register('city', { required: 'City is required' })}
+											placeholder="City"
+											className={cn(errors.city && 'border-red-500')}
+										/>
+										{errors.city && (
+											<p className="text-xs text-red-500 mt-1">{errors.city.message}</p>
+										)}
+									</div>
+									<div>
+										<Label htmlFor="order_date" className="text-sm">Order Date</Label>
+										<Input
+											id="order_date"
+											type="date"
+											value={orderDate}
+											onChange={(e) => {
+												setOrderDate(e.target.value);
+												setValue('order_date', new Date(e.target.value).toISOString());
+											}}
+										/>
+									</div>
+								</div>
+							</div>
+						</CardContent>
+					</Card>
+
+					{/* Order Details */}
+					<Card>
+						<CardHeader className="pb-3">
+							<div className="flex items-center gap-2">
 								<Package className="h-4 w-4" />
-								Products ({orderProducts.length})
-							</CardTitle>
+								<CardTitle className="text-base">Order Details</CardTitle>
+							</div>
+						</CardHeader>
+						<CardContent className="space-y-4">
+							<div className="space-y-3">
+								<div>
+									<Label htmlFor="order_code" className="text-sm">Order Code</Label>
+									<Input
+										id="order_code"
+										{...register('order_code')}
+										readOnly
+										className="bg-muted font-mono text-xs"
+									/>
+								</div>
+
+								<div className="grid grid-cols-2 gap-3">
+									<div>
+										<Label htmlFor="order_status" className="text-sm">Order Status</Label>
+										<Controller
+											name="order_status"
+											control={control}
+											render={({ field }) => (
+												<Select onValueChange={field.onChange} defaultValue={field.value}>
+													<SelectTrigger>
+														<SelectValue />
+													</SelectTrigger>
+													<SelectContent>
+														<SelectItem value="pending">
+															<span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-gray-400"></span> Pending</span>
+														</SelectItem>
+														<SelectItem value="processing">
+															<span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-400"></span> Processing</span>
+														</SelectItem>
+														<SelectItem value="confirmed">
+															<span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-400"></span> Confirmed</span>
+														</SelectItem>
+														<SelectItem value="shipped">
+															<span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-purple-400"></span> Shipped</span>
+														</SelectItem>
+														<SelectItem value="delivered">
+															<span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500"></span> Delivered</span>
+														</SelectItem>
+														<SelectItem value="cancelled">
+															<span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-400"></span> Cancelled</span>
+														</SelectItem>
+													</SelectContent>
+												</Select>
+											)}
+										/>
+									</div>
+
+									<div>
+										<Label htmlFor="order_payment_status" className="text-sm">Payment Status</Label>
+										<Controller
+											name="order_payment_status"
+											control={control}
+											render={({ field }) => (
+												<Select onValueChange={field.onChange} defaultValue={field.value}>
+													<SelectTrigger>
+														<SelectValue />
+													</SelectTrigger>
+													<SelectContent>
+														<SelectItem value="unpaid">
+															<span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-400"></span> Unpaid</span>
+														</SelectItem>
+														<SelectItem value="partial">
+															<span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-yellow-400"></span> Partial</span>
+														</SelectItem>
+														<SelectItem value="paid">
+															<span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-400"></span> Paid</span>
+														</SelectItem>
+													</SelectContent>
+												</Select>
+											)}
+										/>
+									</div>
+								</div>
+
+								<div>
+									<Label htmlFor="remark" className="text-sm">Additional Notes</Label>
+									<Textarea
+										id="remark"
+										{...register('remark')}
+										placeholder="Any additional notes or special instructions..."
+										rows={2}
+									/>
+								</div>
+							</div>
+						</CardContent>
+					</Card>
+				</div>
+
+				{/* Products Section */}
+				<Card>
+					<CardHeader>
+						<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+							<div className="flex items-center gap-2">
+								<Package className="h-4 w-4" />
+								<CardTitle className="text-base">Products ({orderProducts.length})</CardTitle>
+							</div>
 							<Button
 								type="button"
 								onClick={() => setShowProductSearch(true)}
 								size="sm"
 								variant="outline"
 							>
-								<Plus className="h-4 w-4 mr-2" />
+								<Plus className="h-4 w-4 mr-1" />
 								Add Product
 							</Button>
 						</div>
 					</CardHeader>
-					<CardContent className="space-y-3">
+					<CardContent>
 						{orderProducts.length === 0 ? (
 							<div className="text-center py-8 text-muted-foreground">
 								<Package className="h-12 w-12 mx-auto mb-2 opacity-20" />
 								<p className="text-sm">No products added yet</p>
-								<p className="text-xs">Click "Add Product" to start</p>
+								<p className="text-xs">Click &ldquo;Add Product&rdquo; to start</p>
 							</div>
 						) : (
-							<div className="space-y-2">
+							<div className="space-y-3">
 								{orderProducts.map((product, index) => (
 									<div
 										key={product._id}
-										className="border rounded-lg p-3 space-y-2 hover:bg-accent/50 transition-colors"
+										className="border rounded-lg p-3 hover:bg-accent/30 transition-colors flex flex-col sm:flex-row"
 									>
-										<div className="flex items-start justify-between gap-2">
-											<div className="flex-1 min-w-0">
+										<div className="flex-1 flex items-start gap-3">
+											{product.thumbnail && (
+												<div className="bg-gray-100 rounded p-1 flex-shrink-0">
+													<img 
+														src={product.thumbnail} 
+														alt={product.productTitle} 
+														className="w-10 h-10 object-cover rounded" 
+													/>
+												</div>
+											)}
+											<div className="min-w-0">
 												<div className="flex items-center gap-2">
-													<h4 className="font-medium text-sm truncate">
-														{product.productTitle}
-													</h4>
+													<h4 className="font-medium text-sm truncate max-w-[200px]">{product.productTitle}</h4>
 													{product.variantName && (
 														<Badge variant="secondary" className="text-xs">
 															{product.variantName}
@@ -479,6 +508,38 @@ export function OrderForm({ onSuccess }: OrderFormProps) {
 													</span>
 												</div>
 											</div>
+										</div>
+										
+										<div className="flex items-center justify-between sm:justify-end mt-3 sm:mt-0 gap-4">
+											<div className="flex items-center gap-2">
+												<Button
+													type="button"
+													variant="outline"
+													size="sm"
+													className="h-7 w-7 p-0 rounded-full"
+													onClick={() => updateProductQuantity(index, product.quantity - 1)}
+													disabled={product.quantity <= 1}
+												>
+													<Minus className="h-3 w-3" />
+												</Button>
+												<span className="text-sm font-medium min-w-[20px] text-center">
+													{product.quantity}
+												</span>
+												<Button
+													type="button"
+													variant="outline"
+													size="sm"
+													className="h-7 w-7 p-0 rounded-full"
+													onClick={() => updateProductQuantity(index, product.quantity + 1)}
+												>
+													<Plus className="h-3 w-3" />
+												</Button>
+											</div>
+											
+											<div className="text-sm font-semibold">
+												৳{product.lineTotal.toFixed(2)}
+											</div>
+											
 											<Button
 												type="button"
 												variant="ghost"
@@ -489,37 +550,6 @@ export function OrderForm({ onSuccess }: OrderFormProps) {
 												<Trash2 className="h-4 w-4" />
 											</Button>
 										</div>
-
-										<div className="flex items-center gap-3">
-											<div className="flex items-center gap-2">
-												<Button
-													type="button"
-													variant="outline"
-													size="sm"
-													className="h-7 w-7 p-0"
-													onClick={() => updateProductQuantity(index, product.quantity - 1)}
-													disabled={product.quantity <= 1}
-												>
-													-
-												</Button>
-												<span className="text-sm font-medium min-w-[30px] text-center">
-													{product.quantity}
-												</span>
-												<Button
-													type="button"
-													variant="outline"
-													size="sm"
-													className="h-7 w-7 p-0"
-													onClick={() => updateProductQuantity(index, product.quantity + 1)}
-												>
-													+
-												</Button>
-											</div>
-											<Separator orientation="vertical" className="h-4" />
-											<div className="text-sm font-semibold">
-												৳{product.lineTotal.toFixed(2)}
-											</div>
-										</div>
 									</div>
 								))}
 							</div>
@@ -528,25 +558,23 @@ export function OrderForm({ onSuccess }: OrderFormProps) {
 				</Card>
 
 				{/* Financial Summary */}
-				<Card className="border-l-4 border-l-amber-500">
-					<CardHeader className="pb-3">
-						<CardTitle className="text-base flex items-center gap-2">
+				<Card>
+					<CardHeader>
+						<div className="flex items-center gap-2">
 							<DollarSign className="h-4 w-4" />
-							Financial Summary
-						</CardTitle>
+							<CardTitle className="text-base">Financial Summary</CardTitle>
+						</div>
 					</CardHeader>
-					<CardContent className="space-y-3">
-						<div className="space-y-2">
-							<div className="flex justify-between items-center py-2">
-								<span className="text-sm text-muted-foreground">Subtotal</span>
-								<span className="font-semibold">৳{subTotal.toFixed(2)}</span>
+					<CardContent className="space-y-4">
+						<div className="space-y-3">
+							<div className="flex justify-between items-center border-b pb-2">
+								<span className="text-sm">Subtotal ({orderProducts.length} items)</span>
+								<span className="font-medium">৳{subTotal.toFixed(2)}</span>
 							</div>
-
-							<Separator />
-
-							<div className="grid grid-cols-2 gap-3">
+							
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
 								<div>
-									<Label htmlFor="discount_amount" className="text-xs">Discount</Label>
+									<Label htmlFor="discount_amount" className="text-sm">Discount (৳)</Label>
 									<Input
 										id="discount_amount"
 										type="number"
@@ -558,7 +586,7 @@ export function OrderForm({ onSuccess }: OrderFormProps) {
 								</div>
 
 								<div>
-									<Label htmlFor="delivery_cost" className="text-xs">Delivery</Label>
+									<Label htmlFor="delivery_cost" className="text-sm">Delivery (৳)</Label>
 									<Input
 										id="delivery_cost"
 										type="number"
@@ -570,19 +598,15 @@ export function OrderForm({ onSuccess }: OrderFormProps) {
 								</div>
 							</div>
 
-							<Separator />
-
-							<div className="flex justify-between items-center py-2 bg-accent/50 px-3 rounded-md">
+							<div className="flex justify-between items-center bg-accent p-3 rounded">
 								<span className="font-medium">Order Total</span>
-								<span className="text-lg font-bold text-primary">
+								<span className="text-xl font-bold text-primary">
 									৳{orderAmount.toFixed(2)}
 								</span>
 							</div>
 
-							<Separator />
-
 							<div>
-								<Label htmlFor="paid_amount" className="text-xs">Paid Amount</Label>
+								<Label htmlFor="paid_amount" className="text-sm">Paid Amount (৳)</Label>
 								<Input
 									id="paid_amount"
 									type="number"
@@ -593,31 +617,16 @@ export function OrderForm({ onSuccess }: OrderFormProps) {
 								/>
 							</div>
 
-							<div className="flex justify-between items-center py-2">
-								<span className="text-sm font-medium">Due Amount</span>
+							<div className="flex justify-between items-center pt-2">
+								<span className="font-medium">Due Amount</span>
 								<span className={cn(
-									"font-semibold",
-									dueAmount > 0 ? "text-red-600" : "text-green-600"
+									"text-xl font-bold",
+									dueAmount > 0 ? "text-red-600" : dueAmount === 0 ? "text-green-600" : "text-blue-600"
 								)}>
 									৳{dueAmount.toFixed(2)}
 								</span>
 							</div>
 						</div>
-					</CardContent>
-				</Card>
-
-				{/* Remark */}
-				<Card>
-					<CardHeader className="pb-3">
-						<CardTitle className="text-base">Additional Notes</CardTitle>
-					</CardHeader>
-					<CardContent>
-						<Textarea
-							id="remark"
-							{...register('remark')}
-							placeholder="Any additional notes or special instructions..."
-							rows={2}
-						/>
 					</CardContent>
 				</Card>
 
@@ -629,7 +638,16 @@ export function OrderForm({ onSuccess }: OrderFormProps) {
 						className="w-full"
 						size="lg"
 					>
-						{isSubmitting ? 'Creating Order...' : 'Create Order'}
+						{isSubmitting ? (
+							<span className="flex items-center justify-center">
+								Creating Order...
+							</span>
+						) : (
+							<span className="flex items-center justify-center">
+								<ShoppingCart className="h-5 w-5 mr-2" />
+								Create Order
+							</span>
+						)}
 					</Button>
 				</div>
 			</form>
@@ -654,11 +672,28 @@ export function OrderForm({ onSuccess }: OrderFormProps) {
 
 // Product Search Dialog Component
 interface ProductSearchDialogProps {
-	products: any[];
-	warehouses: any[];
+	products: Array<{
+		_id: string;
+		title: string;
+		slug: string;
+		thumbnail?: string;
+		price: number;
+		salePrice?: number;
+		quantity?: number;
+		variants: Array<{
+			name: string;
+			price: number;
+			salePrice?: number;
+			quantity?: number;
+		}>;
+	}>;
+	warehouses: Array<{
+		_id: string;
+		title: string;
+	}>;
 	searchQuery: string;
 	setSearchQuery: (query: string) => void;
-	onAddProduct: (product: any, variantName: string | null, warehouseId: string) => void;
+	onAddProduct: (product: ProductSearchDialogProps['products'][0], variantName: string | null, warehouseId: string | null) => void;
 	onClose: () => void;
 }
 
@@ -670,7 +705,7 @@ function ProductSearchDialog({
 	onAddProduct,
 	onClose,
 }: ProductSearchDialogProps) {
-	const [selectedProduct, setSelectedProduct] = useState<any>(null);
+	const [selectedProduct, setSelectedProduct] = useState<ProductSearchDialogProps['products'][0] | null>(null);
 	const [selectedVariant, setSelectedVariant] = useState<string | null>(null);
 	const [selectedWarehouse, setSelectedWarehouse] = useState<string>('');
 
@@ -679,12 +714,8 @@ function ProductSearchDialog({
 			toast.error('Please select a product');
 			return;
 		}
-		if (!selectedWarehouse) {
-			toast.error('Please select a warehouse');
-			return;
-		}
 
-		onAddProduct(selectedProduct, selectedVariant, selectedWarehouse);
+		onAddProduct(selectedProduct, selectedVariant, selectedWarehouse || null);
 		setSelectedProduct(null);
 		setSelectedVariant(null);
 		setSelectedWarehouse('');
@@ -695,8 +726,8 @@ function ProductSearchDialog({
 			<Card className="w-full max-w-2xl max-h-[80vh] flex flex-col">
 				<CardHeader className="pb-3 border-b">
 					<div className="flex items-center justify-between">
-						<CardTitle className="text-lg flex items-center gap-2">
-							<Search className="h-5 w-5" />
+						<CardTitle className="text-base flex items-center gap-2">
+							<Search className="h-4 w-4" />
 							Add Product to Order
 						</CardTitle>
 						<Button variant="ghost" size="sm" onClick={onClose} className="h-8 w-8 p-0">
@@ -720,10 +751,10 @@ function ProductSearchDialog({
 
 					{/* Product List */}
 					<div className="space-y-2">
-						<Label className="text-xs font-medium">Select Product</Label>
+						<Label>Select Product</Label>
 						<div className="border rounded-lg divide-y max-h-[200px] overflow-y-auto">
 							{products.length === 0 ? (
-								<div className="p-4 text-center text-sm text-muted-foreground">
+								<div className="p-4 text-center text-muted-foreground">
 									No products found
 								</div>
 							) : (
@@ -731,7 +762,7 @@ function ProductSearchDialog({
 									<div
 										key={product._id}
 										className={cn(
-											"p-3 cursor-pointer hover:bg-accent transition-colors",
+											"p-3 cursor-pointer hover:bg-accent transition-colors flex items-center gap-2",
 											selectedProduct?._id === product._id && "bg-accent"
 										)}
 										onClick={() => {
@@ -739,18 +770,36 @@ function ProductSearchDialog({
 											setSelectedVariant(null);
 										}}
 									>
-										<div className="flex items-center justify-between">
-											<div>
-												<h4 className="font-medium text-sm">{product.title}</h4>
-												<p className="text-xs text-muted-foreground">
-													৳{product.salePrice || product.price}
-													{product.variants?.length > 0 && ` • ${product.variants.length} variants`}
-												</p>
+										{product.thumbnail && (
+											<div className="bg-gray-100 rounded p-1 flex-shrink-0">
+												<img 
+													src={product.thumbnail} 
+													alt={product.title} 
+													className="w-10 h-10 object-cover rounded" 
+												/>
 											</div>
-											{selectedProduct?._id === product._id && (
-												<Badge variant="default" className="text-xs">Selected</Badge>
-											)}
+										)}
+										<div className="flex-1 min-w-0">
+											<h4 className="font-medium text-sm truncate">{product.title}</h4>
+											<div className="flex items-center gap-2 mt-1">
+												<span className="text-sm font-medium text-primary">
+													৳{product.salePrice || product.price}
+												</span>
+												{product.variants?.length > 0 && (
+													<Badge variant="outline" className="text-xs">
+														{product.variants.length} variants
+													</Badge>
+												)}
+												<Badge variant="secondary" className="text-xs">
+													Stock: {product.quantity || 0}
+												</Badge>
+											</div>
 										</div>
+										{selectedProduct?._id === product._id && (
+											<Badge variant="default" className="text-xs">
+												Selected
+											</Badge>
+										)}
 									</div>
 								))
 							)}
@@ -760,7 +809,7 @@ function ProductSearchDialog({
 					{/* Variant Selection */}
 					{selectedProduct && selectedProduct.variants?.length > 0 && (
 						<div className="space-y-2">
-							<Label className="text-xs font-medium">Select Variant (Optional)</Label>
+							<Label>Select Variant (Optional)</Label>
 							<Select
 								value={selectedVariant || 'base'}
 								onValueChange={(value) => setSelectedVariant(value === 'base' ? null : value)}
@@ -769,10 +818,17 @@ function ProductSearchDialog({
 									<SelectValue />
 								</SelectTrigger>
 								<SelectContent>
-									<SelectItem value="base">Base Product - ৳{selectedProduct.salePrice || selectedProduct.price}</SelectItem>
-									{selectedProduct.variants.map((variant: any) => (
+									<SelectItem value="base">
+										Base Product - ৳{selectedProduct.salePrice || selectedProduct.price}
+									</SelectItem>
+									{selectedProduct.variants.map((variant) => (
 										<SelectItem key={variant.name} value={variant.name}>
 											{variant.name} - ৳{variant.salePrice || variant.price}
+											{variant.quantity !== undefined && (
+												<span className="text-xs text-muted-foreground ml-1">
+													(Stock: {variant.quantity})
+												</span>
+											)}
 										</SelectItem>
 									))}
 								</SelectContent>
@@ -782,18 +838,16 @@ function ProductSearchDialog({
 
 					{/* Warehouse Selection */}
 					<div className="space-y-2">
-						<Label className="text-xs font-medium">
-							Select Warehouse <span className="text-red-500">*</span>
-						</Label>
+						<Label htmlFor="warehouse">Select Warehouse (Optional)</Label>
 						<Select
 							value={selectedWarehouse}
 							onValueChange={setSelectedWarehouse}
 						>
 							<SelectTrigger>
-								<SelectValue placeholder="Choose warehouse" />
+								<SelectValue placeholder="Choose warehouse (optional)" />
 							</SelectTrigger>
 							<SelectContent>
-								{warehouses.map((warehouse: any) => (
+								{warehouses.map((warehouse) => (
 									<SelectItem key={warehouse._id} value={warehouse._id}>
 										{warehouse.title}
 									</SelectItem>
@@ -803,28 +857,39 @@ function ProductSearchDialog({
 					</div>
 
 					{/* Selected Product Preview */}
-					{selectedProduct && selectedWarehouse && (
-						<div className="bg-accent/50 rounded-lg p-3 space-y-1">
+					{selectedProduct && (
+						<div className="bg-accent rounded-lg p-3 space-y-1">
 							<p className="text-xs font-medium">Preview:</p>
 							<div className="flex items-center justify-between">
-								<div>
-									<p className="text-sm font-medium">{selectedProduct.title}</p>
-									{selectedVariant && (
-										<Badge variant="secondary" className="text-xs mt-1">
-											{selectedVariant}
-										</Badge>
+								<div className="flex items-center gap-2">
+									{selectedProduct.thumbnail && (
+										<img
+											src={selectedProduct.thumbnail}
+											alt={selectedProduct.title}
+											className="w-8 h-8 object-cover rounded"
+										/>
 									)}
+									<div>
+										<p className="text-sm font-medium">{selectedProduct.title}</p>
+										{selectedVariant && (
+											<Badge variant="secondary" className="text-xs mt-1">
+												{selectedVariant}
+											</Badge>
+										)}
+									</div>
 								</div>
 								<div className="text-right">
 									<p className="text-sm font-semibold">
 										৳{selectedVariant
-											? (selectedProduct.variants.find((v: any) => v.name === selectedVariant)?.salePrice ||
-											   selectedProduct.variants.find((v: any) => v.name === selectedVariant)?.price)
+											? (selectedProduct.variants.find((v) => v.name === selectedVariant)?.salePrice ||
+											   selectedProduct.variants.find((v) => v.name === selectedVariant)?.price)
 											: (selectedProduct.salePrice || selectedProduct.price)}
 									</p>
-									<p className="text-xs text-muted-foreground">
-										{warehouses.find((w: any) => w._id === selectedWarehouse)?.title}
-									</p>
+									{selectedWarehouse && (
+										<p className="text-xs text-muted-foreground">
+											{warehouses.find((w) => w._id === selectedWarehouse)?.title}
+										</p>
+									)}
 								</div>
 							</div>
 						</div>
@@ -837,10 +902,9 @@ function ProductSearchDialog({
 					</Button>
 					<Button
 						onClick={handleAdd}
-						disabled={!selectedProduct || !selectedWarehouse}
+						disabled={!selectedProduct}
 						className="flex-1"
 					>
-						<Plus className="h-4 w-4 mr-2" />
 						Add to Order
 					</Button>
 				</div>

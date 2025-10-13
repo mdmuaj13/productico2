@@ -45,7 +45,7 @@ export const authenticateToken = async (request: NextRequest) => {
 			error: null,
 			user,
 		};
-	} catch (error) {
+	} catch {
 		return {
 			error: ApiSerializer.error('Authentication failed', 500),
 			user: null,

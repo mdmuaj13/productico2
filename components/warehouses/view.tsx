@@ -30,7 +30,6 @@ export function WarehouseView({
 	return (
 		<EntityView
 			title="Warehouse Details"
-			description="View warehouse information and manage actions."
 			entity={warehouse}
 			entityName="Warehouse"
 			getEntityDisplayName={(w) => w.title}

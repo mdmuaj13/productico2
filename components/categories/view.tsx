@@ -35,7 +35,6 @@ export function CategoryView({
 	return (
 		<EntityView
 			title="Category Details"
-			description="View category information and manage actions."
 			entity={category}
 			entityName="Category"
 			getEntityDisplayName={(cat) => cat.title}
