@@ -16,9 +16,10 @@ import {
   SheetClose,
 } from '@/components/ui/sheet';
 import { toast } from 'sonner';
+import { IExpenseBook } from '@/models/ExpenseBook';
 
 interface ExpenseBookFormProps {
-  book?: any;
+  book?: IExpenseBook;
   onSuccess: () => void;
 }
 
@@ -43,13 +44,13 @@ export default function ExpenseBookForm({ book, onSuccess }: ExpenseBookFormProp
   const onSubmit = async (data: CreateExpenseBookInput) => {
     try {
       if (book) {
-        await updateExpenseBook(book._id, data);
+        await updateExpenseBook(book._id.toString(), data);
       } else {
         await createExpenseBook(data);
       }
       onSuccess();
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to save expense book');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to save expense book');
       console.error('Error saving expense book:', error);
     }
   };

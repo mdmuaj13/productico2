@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Plus, TrendingUp, TrendingDown, Wallet, Eye, Search } from 'lucide-react';
+import { ArrowLeft, Plus, TrendingUp, TrendingDown, Wallet, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import ExpenseEntryForm from './expense-entry-form';
@@ -16,29 +16,20 @@ import { format } from 'date-fns';
 import { SimpleTable } from '@/components/simple-table';
 import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import { Spinner } from '../ui/shadcn-io/spinner';
+import { IExpenseEntry } from '@/models/ExpenseEntry';
 
 interface ExpenseBookDetailsProps {
   bookId: string;
-}
-
-interface ExpenseEntry {
-  _id: string;
-  type: 'credit' | 'debit';
-  amount: number;
-  date: string;
-  time?: string;
-  remark?: string;
-  category?: string;
 }
 
 export default function ExpenseBookDetails({ bookId }: ExpenseBookDetailsProps) {
   const router = useRouter();
   const [createSheetOpen, setCreateSheetOpen] = useState(false);
   const [editSheetOpen, setEditSheetOpen] = useState(false);
-  const [selectedEntry, setSelectedEntry] = useState<ExpenseEntry | null>(null);
+  const [selectedEntry, setSelectedEntry] = useState<IExpenseEntry | null>(null);
   const [defaultEntryType, setDefaultEntryType] = useState<'credit' | 'debit'>('debit');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [deletingEntry, setDeletingEntry] = useState<ExpenseEntry | null>(null);
+  const [deletingEntry, setDeletingEntry] = useState<IExpenseEntry | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [search, setSearch] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -68,12 +59,12 @@ export default function ExpenseBookDetails({ bookId }: ExpenseBookDetailsProps) 
     toast.success('Entry updated successfully');
   };
 
-  const handleEdit = (entry: ExpenseEntry) => {
+  const handleEdit = (entry: IExpenseEntry) => {
     setSelectedEntry(entry);
     setEditSheetOpen(true);
   };
 
-  const handleDeleteClick = (entry: ExpenseEntry) => {
+  const handleDeleteClick = (entry: IExpenseEntry) => {
     setDeletingEntry(entry);
     setDeleteDialogOpen(true);
   };
@@ -83,7 +74,7 @@ export default function ExpenseBookDetails({ bookId }: ExpenseBookDetailsProps) 
 
     setIsDeleting(true);
     try {
-      await deleteExpenseEntry(deletingEntry._id);
+      await deleteExpenseEntry(deletingEntry._id.toString());
       mutateEntries();
       mutateBook();
       toast.success('Entry deleted successfully');
@@ -106,11 +97,6 @@ export default function ExpenseBookDetails({ bookId }: ExpenseBookDetailsProps) 
     }
   };
 
-  const openCreateSheet = (type: 'credit' | 'debit') => {
-    setDefaultEntryType(type);
-    setCreateSheetOpen(true);
-  };
-
   const columns = [
     {
       key: 'type',
@@ -129,7 +115,7 @@ export default function ExpenseBookDetails({ bookId }: ExpenseBookDetailsProps) 
     {
       key: 'date',
       header: 'Date',
-      render: (value: unknown, row: ExpenseEntry) => (
+      render: (value: unknown, row: IExpenseEntry) => (
         <div>
           <div>{format(new Date(String(value)), 'PPP')}</div>
           {row.time && (
@@ -161,12 +147,12 @@ export default function ExpenseBookDetails({ bookId }: ExpenseBookDetailsProps) 
   const actions = [
     {
       label: 'Edit',
-      onClick: (entry: ExpenseEntry) => handleEdit(entry),
+      onClick: (entry: IExpenseEntry) => handleEdit(entry),
       variant: 'outline' as const,
     },
     {
       label: 'Delete',
-      onClick: (entry: ExpenseEntry) => handleDeleteClick(entry),
+      onClick: (entry: IExpenseEntry) => handleDeleteClick(entry),
       variant: 'destructive' as const,
     },
   ];

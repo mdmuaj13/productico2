@@ -13,17 +13,7 @@ import ExpenseBookForm from './expense-book-form';
 import { SimpleTable } from '@/components/simple-table';
 import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import { Spinner } from '../ui/shadcn-io/spinner';
-
-interface ExpenseBook {
-  _id: string;
-  name: string;
-  description?: string;
-  creditTotal: number;
-  debitTotal: number;
-  netBalance: number;
-  createdAt: string;
-  updatedAt: string;
-}
+import { IExpenseBook } from '@/models/ExpenseBook';
 
 export default function ExpenseBooksList() {
   const router = useRouter();
@@ -31,9 +21,9 @@ export default function ExpenseBooksList() {
   const [searchTerm, setSearchTerm] = useState('');
   const [createSheetOpen, setCreateSheetOpen] = useState(false);
   const [editSheetOpen, setEditSheetOpen] = useState(false);
-  const [selectedBook, setSelectedBook] = useState<ExpenseBook | null>(null);
+  const [selectedBook, setSelectedBook] = useState<IExpenseBook | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [deletingBook, setDeletingBook] = useState<ExpenseBook | null>(null);
+  const [deletingBook, setDeletingBook] = useState<IExpenseBook | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const { data: booksData, error, mutate: mutateBooks } = useExpenseBooks({
@@ -58,12 +48,12 @@ export default function ExpenseBooksList() {
     toast.success('Expense book updated successfully');
   };
 
-  const handleEdit = (book: ExpenseBook) => {
+  const handleEdit = (book: IExpenseBook) => {
     setSelectedBook(book);
     setEditSheetOpen(true);
   };
 
-  const handleDeleteClick = (book: ExpenseBook) => {
+  const handleDeleteClick = (book: IExpenseBook) => {
     setDeletingBook(book);
     setDeleteDialogOpen(true);
   };
@@ -73,7 +63,7 @@ export default function ExpenseBooksList() {
 
     setIsDeleting(true);
     try {
-      await deleteExpenseBook(deletingBook._id);
+      await deleteExpenseBook(deletingBook._id.toString());
       toast.success('Expense book deleted successfully');
       mutateBooks();
     } catch {
@@ -85,8 +75,8 @@ export default function ExpenseBooksList() {
     }
   };
 
-  const handleViewDetails = (book: ExpenseBook) => {
-    router.push(`/app/expenses/${book._id}`);
+  const handleViewDetails = (book: IExpenseBook) => {
+    router.push(`/app/expenses/${book._id.toString()}`);
   };
 
   const handleSearch = () => {
@@ -140,18 +130,18 @@ export default function ExpenseBooksList() {
   const actions = [
     {
       label: 'View',
-      onClick: (book: ExpenseBook) => handleViewDetails(book),
+      onClick: (book: IExpenseBook) => handleViewDetails(book),
       variant: 'outline' as const,
       icon: Eye,
     },
     {
       label: 'Edit',
-      onClick: (book: ExpenseBook) => handleEdit(book),
+      onClick: (book: IExpenseBook) => handleEdit(book),
       variant: 'outline' as const,
     },
     {
       label: 'Delete',
-      onClick: (book: ExpenseBook) => handleDeleteClick(book),
+      onClick: (book: IExpenseBook) => handleDeleteClick(book),
       variant: 'destructive' as const,
     },
   ];

@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     const skip = (page - 1) * limit;
 
     // Build query
-    const query: any = { deletedAt: null };
+    const query: Record<string, unknown> = { deletedAt: null };
 
     if (search) {
       query.$or = [
@@ -45,10 +45,10 @@ export async function GET(request: NextRequest) {
         totalPages: Math.ceil(total / limit)
       }
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error fetching expense books:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch expense books', details: error.message },
+      { error: 'Failed to fetch expense books', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }
@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
     const book = await ExpenseBook.create(validatedData);
 
     return NextResponse.json(book, { status: 201 });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error creating expense book:', error);
 
     if (error instanceof ZodError) {
@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { error: 'Failed to create expense book', details: error.message },
+      { error: 'Failed to create expense book', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }

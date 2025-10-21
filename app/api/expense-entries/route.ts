@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     const skip = (page - 1) * limit;
 
     // Build query
-    const query: any = { deletedAt: null };
+    const query: Record<string, unknown> = { deletedAt: null };
 
     if (bookId) {
       query.bookId = bookId;
@@ -62,10 +62,10 @@ export async function GET(request: NextRequest) {
         totalPages: Math.ceil(total / limit)
       }
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error fetching expense entries:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch expense entries', details: error.message },
+      { error: 'Failed to fetch expense entries', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }
@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
       .lean();
 
     return NextResponse.json(populatedEntry, { status: 201 });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error creating expense entry:', error);
 
     if (error instanceof ZodError) {
@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { error: 'Failed to create expense entry', details: error.message },
+      { error: 'Failed to create expense entry', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }

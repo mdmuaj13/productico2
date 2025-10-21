@@ -4,6 +4,7 @@ import ExpenseBook from '@/models/ExpenseBook';
 import { updateExpenseBookSchema } from '@/lib/validations/expense';
 import { ZodError } from 'zod';
 import mongoose from 'mongoose';
+import { ApiSerializer } from '@/types/payload';
 
 // GET /api/expense-books/[id] - Get single expense book
 export async function GET(
@@ -34,12 +35,9 @@ export async function GET(
     }
 
     return NextResponse.json(book);
-  } catch (error: any) {
-    console.error('Error fetching expense book:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch expense book', details: error.message },
-      { status: 500 }
-    );
+  } catch (e) {
+    console.log(e);
+    return ApiSerializer.error('Failed to fetch expense book');
   }
 }
 
@@ -76,7 +74,7 @@ export async function PUT(
     }
 
     return NextResponse.json(book);
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error updating expense book:', error);
 
     if (error instanceof ZodError) {
@@ -87,7 +85,7 @@ export async function PUT(
     }
 
     return NextResponse.json(
-      { error: 'Failed to update expense book', details: error.message },
+      { error: 'Failed to update expense book', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }
@@ -123,10 +121,10 @@ export async function DELETE(
     }
 
     return NextResponse.json({ message: 'Expense book deleted successfully' });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error deleting expense book:', error);
     return NextResponse.json(
-      { error: 'Failed to delete expense book', details: error.message },
+      { error: 'Failed to delete expense book', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }

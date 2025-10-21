@@ -37,10 +37,10 @@ export async function GET(
     }
 
     return NextResponse.json(entry);
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error fetching expense entry:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch expense entry', details: error.message },
+      { error: 'Failed to fetch expense entry', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }
@@ -79,9 +79,9 @@ export async function PUT(
     const validatedData = updateExpenseEntrySchema.parse(body);
 
     // Convert date string to Date object if provided
-    const updateData: any = { ...validatedData };
+    const updateData: Record<string, unknown> = { ...validatedData };
     if (updateData.date) {
-      updateData.date = new Date(updateData.date);
+      updateData.date = new Date(updateData.date as string);
     }
 
     const entry = await ExpenseEntry.findOneAndUpdate(
@@ -96,7 +96,7 @@ export async function PUT(
     await recalculateBookTotals(existingEntry.bookId);
 
     return NextResponse.json(entry);
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error updating expense entry:', error);
 
     if (error instanceof ZodError) {
@@ -107,7 +107,7 @@ export async function PUT(
     }
 
     return NextResponse.json(
-      { error: 'Failed to update expense entry', details: error.message },
+      { error: 'Failed to update expense entry', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }
@@ -146,10 +146,10 @@ export async function DELETE(
     await recalculateBookTotals(entry.bookId);
 
     return NextResponse.json({ message: 'Expense entry deleted successfully' });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error deleting expense entry:', error);
     return NextResponse.json(
-      { error: 'Failed to delete expense entry', details: error.message },
+      { error: 'Failed to delete expense entry', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }

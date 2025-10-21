@@ -54,10 +54,10 @@ export async function GET(
       debitTotal,
       netBalance
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error fetching expense book stats:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch expense book stats', details: error.message },
+      { error: 'Failed to fetch expense book stats', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }

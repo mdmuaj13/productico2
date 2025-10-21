@@ -18,10 +18,11 @@ import {
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { useState } from 'react';
+import { IExpenseEntry } from '@/models/ExpenseEntry';
 
 interface ExpenseEntryFormProps {
   bookId: string;
-  entry?: any;
+  entry?: IExpenseEntry;
   defaultType?: 'credit' | 'debit';
   onSuccess: () => void;
 }
@@ -45,7 +46,7 @@ export default function ExpenseEntryForm({
     resolver: zodResolver(createExpenseEntrySchema),
     defaultValues: entry
       ? {
-          bookId: entry.bookId,
+          bookId: entry.bookId.toString(),
           type: entry.type,
           amount: entry.amount,
           date: format(new Date(entry.date), 'yyyy-MM-dd'),
@@ -75,13 +76,13 @@ export default function ExpenseEntryForm({
       const submitData = { ...data, type: selectedType };
 
       if (entry) {
-        await updateExpenseEntry(entry._id, submitData);
+        await updateExpenseEntry(entry._id.toString(), submitData);
       } else {
         await createExpenseEntry(submitData);
       }
       onSuccess();
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to save entry');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to save entry');
       console.error('Error saving entry:', error);
     }
   };
