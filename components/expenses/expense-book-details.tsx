@@ -1,13 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { useExpenseBook, useExpenseBookStats } from '@/hooks/expense-books';
+import { useExpenseBook } from '@/hooks/expense-books';
 import { useExpenseEntries, deleteExpenseEntry } from '@/hooks/expense-entries';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Plus, TrendingUp, TrendingDown, Wallet, Eye } from 'lucide-react';
+import { ArrowLeft, Plus, TrendingUp, TrendingDown, Wallet, Eye, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import ExpenseEntryForm from './expense-entry-form';
@@ -39,13 +40,15 @@ export default function ExpenseBookDetails({ bookId }: ExpenseBookDetailsProps) 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingEntry, setDeletingEntry] = useState<ExpenseEntry | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [search, setSearch] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
 
-  const { data: book } = useExpenseBook(bookId);
-  const { data: stats, mutate: mutateStats } = useExpenseBookStats(bookId);
+  const { data: book, mutate: mutateBook } = useExpenseBook(bookId);
   const { data: entriesData, error, mutate: mutateEntries } = useExpenseEntries({
     bookId,
     page: 1,
     limit: 100,
+    search,
   });
 
   const entries = entriesData?.data || [];
@@ -53,7 +56,7 @@ export default function ExpenseBookDetails({ bookId }: ExpenseBookDetailsProps) 
   const handleCreateSuccess = () => {
     setCreateSheetOpen(false);
     mutateEntries();
-    mutateStats();
+    mutateBook();
     toast.success('Entry created successfully');
   };
 
@@ -61,7 +64,7 @@ export default function ExpenseBookDetails({ bookId }: ExpenseBookDetailsProps) 
     setEditSheetOpen(false);
     setSelectedEntry(null);
     mutateEntries();
-    mutateStats();
+    mutateBook();
     toast.success('Entry updated successfully');
   };
 
@@ -82,7 +85,7 @@ export default function ExpenseBookDetails({ bookId }: ExpenseBookDetailsProps) 
     try {
       await deleteExpenseEntry(deletingEntry._id);
       mutateEntries();
-      mutateStats();
+      mutateBook();
       toast.success('Entry deleted successfully');
     } catch {
       toast.error('Failed to delete entry');
@@ -90,6 +93,16 @@ export default function ExpenseBookDetails({ bookId }: ExpenseBookDetailsProps) 
       setIsDeleting(false);
       setDeleteDialogOpen(false);
       setDeletingEntry(null);
+    }
+  };
+
+  const handleSearch = () => {
+    setSearch(searchTerm);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSearch();
     }
   };
 
@@ -192,7 +205,7 @@ export default function ExpenseBookDetails({ bookId }: ExpenseBookDetailsProps) 
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              ${stats?.creditTotal?.toFixed(2) || '0.00'}
+              ${book?.creditTotal?.toFixed(2) || '0.00'}
             </div>
           </CardContent>
         </Card>
@@ -204,7 +217,7 @@ export default function ExpenseBookDetails({ bookId }: ExpenseBookDetailsProps) 
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">
-              ${stats?.debitTotal?.toFixed(2) || '0.00'}
+              ${book?.debitTotal?.toFixed(2) || '0.00'}
             </div>
           </CardContent>
         </Card>
@@ -216,17 +229,33 @@ export default function ExpenseBookDetails({ bookId }: ExpenseBookDetailsProps) 
           </CardHeader>
           <CardContent>
             <div className={`text-2xl font-bold ${
-              (stats?.netBalance || 0) >= 0 ? 'text-green-600' : 'text-red-600'
+              (book?.netBalance || 0) >= 0 ? 'text-green-600' : 'text-red-600'
             }`}>
-              ${stats?.netBalance?.toFixed(2) || '0.00'}
+              ${book?.netBalance?.toFixed(2) || '0.00'}
             </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Action Buttons */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Entries</h2>
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex-1 max-w-sm">
+          <div className="relative">
+            <Input
+              placeholder="Search by amount or remark..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onKeyDown={handleKeyDown}
+              className="pr-10"
+            />
+            <button
+              onClick={handleSearch}
+              className="absolute right-2 top-2.5 h-4 w-4 text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+            >
+              <Search className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
         <div className="flex gap-2">
           <Sheet open={createSheetOpen} onOpenChange={setCreateSheetOpen}>
             <SheetTrigger asChild>

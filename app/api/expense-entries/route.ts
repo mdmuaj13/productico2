@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
 import ExpenseEntry from '@/models/ExpenseEntry';
 import { createExpenseEntrySchema } from '@/lib/validations/expense';
+import { recalculateBookTotals } from '@/lib/utils/expense';
 import { ZodError } from 'zod';
 
 // GET /api/expense-entries - Get all expense entries
@@ -85,6 +86,9 @@ export async function POST(request: NextRequest) {
     };
 
     const entry = await ExpenseEntry.create(entryData);
+
+    // Recalculate book totals
+    await recalculateBookTotals(validatedData.bookId);
 
     // Populate book info
     const populatedEntry = await ExpenseEntry.findById(entry._id)

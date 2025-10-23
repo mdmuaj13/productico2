@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
 import ExpenseEntry from '@/models/ExpenseEntry';
 import { updateExpenseEntrySchema } from '@/lib/validations/expense';
+import { recalculateBookTotals } from '@/lib/utils/expense';
 import { ZodError } from 'zod';
 import mongoose from 'mongoose';
 
@@ -61,6 +62,19 @@ export async function PUT(
       );
     }
 
+    // Get the entry first to know which book to update
+    const existingEntry = await ExpenseEntry.findOne({
+      _id: id,
+      deletedAt: null
+    }).lean();
+
+    if (!existingEntry) {
+      return NextResponse.json(
+        { error: 'Expense entry not found' },
+        { status: 404 }
+      );
+    }
+
     const body = await request.json();
     const validatedData = updateExpenseEntrySchema.parse(body);
 
@@ -78,12 +92,8 @@ export async function PUT(
       .populate('bookId', 'name')
       .lean();
 
-    if (!entry) {
-      return NextResponse.json(
-        { error: 'Expense entry not found' },
-        { status: 404 }
-      );
-    }
+    // Recalculate book totals
+    await recalculateBookTotals(existingEntry.bookId);
 
     return NextResponse.json(entry);
   } catch (error: any) {
@@ -131,6 +141,9 @@ export async function DELETE(
         { status: 404 }
       );
     }
+
+    // Recalculate book totals
+    await recalculateBookTotals(entry.bookId);
 
     return NextResponse.json({ message: 'Expense entry deleted successfully' });
   } catch (error: any) {

@@ -18,6 +18,9 @@ interface ExpenseBook {
   _id: string;
   name: string;
   description?: string;
+  creditTotal: number;
+  debitTotal: number;
+  netBalance: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -107,6 +110,25 @@ export default function ExpenseBooksList() {
       render: (value: unknown) =>
         value ? String(value) : 'No description'
       ,
+    },
+    {
+      key: 'creditTotal',
+      header: 'Total Credit',
+      render: (value: unknown) => `$${Number(value).toFixed(2)}`,
+    },
+    {
+      key: 'debitTotal',
+      header: 'Total Debit',
+      render: (value: unknown) => `$${Number(value).toFixed(2)}`,
+    },
+    {
+      key: 'netBalance',
+      header: 'Net Balance',
+      render: (value: unknown) => {
+        const balance = Number(value);
+        const className = balance >= 0 ? 'text-green-600' : 'text-red-600';
+        return <span className={className}>${balance.toFixed(2)}</span>;
+      },
     },
     {
       key: 'createdAt',

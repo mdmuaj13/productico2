@@ -4,6 +4,9 @@ export interface IExpenseBook extends Document {
   _id: mongoose.Types.ObjectId;
   name: string;
   description?: string;
+  creditTotal: number;
+  debitTotal: number;
+  netBalance: number;
   userId?: mongoose.Types.ObjectId;
   deletedAt?: Date | null;
   createdAt: Date;
@@ -22,6 +25,20 @@ const ExpenseBookSchema: Schema<IExpenseBook> = new Schema(
       type: String,
       trim: true,
       maxlength: [500, 'Description cannot exceed 500 characters']
+    },
+    creditTotal: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    debitTotal: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    netBalance: {
+      type: Number,
+      default: 0
     },
     userId: {
       type: Schema.Types.ObjectId,
