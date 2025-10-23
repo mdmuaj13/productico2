@@ -8,6 +8,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetFooter,
+  SheetClose,
+} from '@/components/ui/sheet';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { useState } from 'react';
@@ -80,101 +87,119 @@ export default function ExpenseEntryForm({
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      {/* Type Toggle */}
-      <div className="space-y-2">
-        <Label>Entry Type *</Label>
-        <div className="grid grid-cols-2 gap-2">
-          <Button
-            type="button"
-            variant={selectedType === 'credit' ? 'default' : 'outline'}
-            onClick={() => handleTypeChange('credit')}
-            className="w-full"
-          >
-            Credit
-          </Button>
-          <Button
-            type="button"
-            variant={selectedType === 'debit' ? 'default' : 'outline'}
-            onClick={() => handleTypeChange('debit')}
-            className="w-full"
-          >
-            Debit
-          </Button>
+    <div className="flex flex-col h-full space-y-6 p-4 py-8">
+      <SheetHeader className="px-0">
+        <SheetTitle>{entry ? 'Edit Entry' : 'Create Entry'}</SheetTitle>
+        <SheetDescription>
+          {entry ? 'Update the expense entry details.' : 'Add a new expense entry to your book.'}
+        </SheetDescription>
+      </SheetHeader>
+
+      <form onSubmit={handleSubmit(onSubmit)} className="flex-1 space-y-4 py-4">
+        {/* Type Toggle */}
+        <div className="space-y-2">
+          <Label>Entry Type *</Label>
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              type="button"
+              variant={selectedType === 'credit' ? 'default' : 'outline'}
+              onClick={() => handleTypeChange('credit')}
+              className="w-full"
+            >
+              Credit
+            </Button>
+            <Button
+              type="button"
+              variant={selectedType === 'debit' ? 'default' : 'outline'}
+              onClick={() => handleTypeChange('debit')}
+              className="w-full"
+            >
+              Debit
+            </Button>
+          </div>
         </div>
-      </div>
 
-      {/* Date */}
-      <div className="space-y-2">
-        <Label htmlFor="date">Date *</Label>
-        <Input
-          id="date"
-          type="date"
-          {...register('date')}
-        />
-        {errors.date && (
-          <p className="text-sm text-destructive">{errors.date.message}</p>
-        )}
-      </div>
+        {/* Date */}
+        <div className="space-y-2">
+          <Label htmlFor="date">Date *</Label>
+          <Input
+            id="date"
+            type="date"
+            {...register('date')}
+          />
+          {errors.date && (
+            <p className="text-sm text-destructive">{errors.date.message}</p>
+          )}
+        </div>
 
-      {/* Time */}
-      <div className="space-y-2">
-        <Label htmlFor="time">Time</Label>
-        <Input
-          id="time"
-          type="time"
-          {...register('time')}
-        />
-        {errors.time && (
-          <p className="text-sm text-destructive">{errors.time.message}</p>
-        )}
-      </div>
+        {/* Time */}
+        <div className="space-y-2">
+          <Label htmlFor="time">Time</Label>
+          <Input
+            id="time"
+            type="time"
+            {...register('time')}
+          />
+          {errors.time && (
+            <p className="text-sm text-destructive">{errors.time.message}</p>
+          )}
+        </div>
 
-      {/* Amount */}
-      <div className="space-y-2">
-        <Label htmlFor="amount">Amount *</Label>
-        <Input
-          id="amount"
-          type="number"
-          step="0.01"
-          placeholder="0.00"
-          {...register('amount', { valueAsNumber: true })}
-        />
-        {errors.amount && (
-          <p className="text-sm text-destructive">{errors.amount.message}</p>
-        )}
-      </div>
+        {/* Amount */}
+        <div className="space-y-2">
+          <Label htmlFor="amount">Amount *</Label>
+          <Input
+            id="amount"
+            type="number"
+            step="0.01"
+            min="0"
+            placeholder="0.00"
+            {...register('amount', { valueAsNumber: true })}
+          />
+          {errors.amount && (
+            <p className="text-sm text-destructive">{errors.amount.message}</p>
+          )}
+        </div>
 
-      {/* Category */}
-      <div className="space-y-2">
-        <Label htmlFor="category">Category</Label>
-        <Input
-          id="category"
-          {...register('category')}
-          placeholder="e.g., Food, Transport, Salary"
-        />
-        {errors.category && (
-          <p className="text-sm text-destructive">{errors.category.message}</p>
-        )}
-      </div>
+        {/* Category */}
+        <div className="space-y-2">
+          <Label htmlFor="category">Category</Label>
+          <Input
+            id="category"
+            {...register('category')}
+            placeholder="e.g., Food, Transport, Salary"
+          />
+          {errors.category && (
+            <p className="text-sm text-destructive">{errors.category.message}</p>
+          )}
+        </div>
 
-      {/* Remark */}
-      <div className="space-y-2">
-        <Label htmlFor="remark">Remark</Label>
-        <Textarea
-          id="remark"
-          {...register('remark')}
-          placeholder="Optional notes about this entry"
-          rows={3}
-        />
-        {errors.remark && (
-          <p className="text-sm text-destructive">{errors.remark.message}</p>
-        )}
-      </div>
+        {/* Remark */}
+        <div className="space-y-2">
+          <Label htmlFor="remark">Remark</Label>
+          <Textarea
+            id="remark"
+            {...register('remark')}
+            placeholder="Optional notes about this entry"
+            rows={3}
+            className="resize-none"
+          />
+          {errors.remark && (
+            <p className="text-sm text-destructive">{errors.remark.message}</p>
+          )}
+        </div>
+      </form>
 
-      <Button type="submit" className="w-full" disabled={isSubmitting}>
-        {isSubmitting ? 'Saving...' : entry ? 'Update Entry' : 'Create Entry'}
-      </Button>
-    </form>
+      <SheetFooter className="gap-2 px-0 mt-auto">
+        <SheetClose asChild>
+          <Button type="button" variant="outline" disabled={isSubmitting}>
+            Cancel
+          </Button>
+        </SheetClose>
+        <Button type="submit" disabled={isSubmitting} onClick={handleSubmit(onSubmit)}>
+          {isSubmitting ? 'Saving...' : entry ? 'Update Entry' : 'Create Entry'}
+        </Button>
+      </SheetFooter>
+    </div>
   );
 }
