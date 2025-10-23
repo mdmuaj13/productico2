@@ -5,28 +5,44 @@ import { useExpenseBook, useExpenseBookStats } from '@/hooks/expense-books';
 import { useExpenseEntries, deleteExpenseEntry } from '@/hooks/expense-entries';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Plus, TrendingUp, TrendingDown, Wallet, Edit, Trash2 } from 'lucide-react';
+import { ArrowLeft, Plus, TrendingUp, TrendingDown, Wallet, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import ExpenseEntryForm from './expense-entry-form';
 import { format } from 'date-fns';
+import { SimpleTable } from '@/components/simple-table';
+import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
+import { Spinner } from '../ui/shadcn-io/spinner';
 
 interface ExpenseBookDetailsProps {
   bookId: string;
+}
+
+interface ExpenseEntry {
+  _id: string;
+  type: 'credit' | 'debit';
+  amount: number;
+  date: string;
+  time?: string;
+  remark?: string;
+  category?: string;
 }
 
 export default function ExpenseBookDetails({ bookId }: ExpenseBookDetailsProps) {
   const router = useRouter();
   const [createSheetOpen, setCreateSheetOpen] = useState(false);
   const [editSheetOpen, setEditSheetOpen] = useState(false);
-  const [selectedEntry, setSelectedEntry] = useState<any>(null);
+  const [selectedEntry, setSelectedEntry] = useState<ExpenseEntry | null>(null);
   const [defaultEntryType, setDefaultEntryType] = useState<'credit' | 'debit'>('debit');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deletingEntry, setDeletingEntry] = useState<ExpenseEntry | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const { data: book } = useExpenseBook(bookId);
   const { data: stats, mutate: mutateStats } = useExpenseBookStats(bookId);
-  const { data: entriesData, mutate: mutateEntries } = useExpenseEntries({
+  const { data: entriesData, error, mutate: mutateEntries } = useExpenseEntries({
     bookId,
     page: 1,
     limit: 100,
@@ -49,24 +65,31 @@ export default function ExpenseBookDetails({ bookId }: ExpenseBookDetailsProps) 
     toast.success('Entry updated successfully');
   };
 
-  const handleEdit = (entry: any) => {
+  const handleEdit = (entry: ExpenseEntry) => {
     setSelectedEntry(entry);
     setEditSheetOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this entry?')) {
-      return;
-    }
+  const handleDeleteClick = (entry: ExpenseEntry) => {
+    setDeletingEntry(entry);
+    setDeleteDialogOpen(true);
+  };
 
+  const handleDeleteConfirm = async () => {
+    if (!deletingEntry) return;
+
+    setIsDeleting(true);
     try {
-      await deleteExpenseEntry(id);
+      await deleteExpenseEntry(deletingEntry._id);
       mutateEntries();
       mutateStats();
       toast.success('Entry deleted successfully');
-    } catch (error) {
+    } catch {
       toast.error('Failed to delete entry');
-      console.error('Error deleting entry:', error);
+    } finally {
+      setIsDeleting(false);
+      setDeleteDialogOpen(false);
+      setDeletingEntry(null);
     }
   };
 
@@ -74,6 +97,76 @@ export default function ExpenseBookDetails({ bookId }: ExpenseBookDetailsProps) 
     setDefaultEntryType(type);
     setCreateSheetOpen(true);
   };
+
+  const columns = [
+    {
+      key: 'type',
+      header: 'Type',
+      render: (value: unknown) => (
+        <Badge variant={value === 'credit' ? 'default' : 'destructive'}>
+          {String(value).toUpperCase()}
+        </Badge>
+      ),
+    },
+    {
+      key: 'amount',
+      header: 'Amount',
+      render: (value: unknown) => `$${Number(value).toFixed(2)}`,
+    },
+    {
+      key: 'date',
+      header: 'Date',
+      render: (value: unknown, row: ExpenseEntry) => (
+        <div>
+          <div>{format(new Date(String(value)), 'PPP')}</div>
+          {row.time && (
+            <div className="text-xs text-muted-foreground">{row.time}</div>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: 'category',
+      header: 'Category',
+      render: (value: unknown) => (
+        value ? (
+          <Badge variant="outline">{String(value)}</Badge>
+        ) : (
+          <span className="text-muted-foreground">-</span>
+        )
+      ),
+    },
+    {
+      key: 'remark',
+      header: 'Remark',
+      render: (value: unknown) =>
+        value ? String(value) : '-'
+      ,
+    },
+  ];
+
+  const actions = [
+    {
+      label: 'Edit',
+      onClick: (entry: ExpenseEntry) => handleEdit(entry),
+      variant: 'outline' as const,
+    },
+    {
+      label: 'Delete',
+      onClick: (entry: ExpenseEntry) => handleDeleteClick(entry),
+      variant: 'destructive' as const,
+    },
+  ];
+
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <p className="text-center text-red-500">Failed to load entries</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -83,7 +176,7 @@ export default function ExpenseBookDetails({ bookId }: ExpenseBookDetailsProps) 
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="flex-1">
-          <h2 className="text-3xl font-bold tracking-tight">{book?.name}</h2>
+          <h1 className="text-2xl font-bold">{book?.name}</h1>
           {book?.description && (
             <p className="text-muted-foreground">{book.description}</p>
           )}
@@ -132,86 +225,54 @@ export default function ExpenseBookDetails({ bookId }: ExpenseBookDetailsProps) 
       </div>
 
       {/* Action Buttons */}
-      <div className="flex gap-4">
-        <Button onClick={() => openCreateSheet('credit')} className="flex-1">
-          <Plus className="mr-2 h-4 w-4" />
-          Add Credit
-        </Button>
-        <Button onClick={() => openCreateSheet('debit')} variant="outline" className="flex-1">
-          <Plus className="mr-2 h-4 w-4" />
-          Add Debit
-        </Button>
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-semibold">Entries</h2>
+        <div className="flex gap-2">
+          <Sheet open={createSheetOpen} onOpenChange={setCreateSheetOpen}>
+            <SheetTrigger asChild>
+              <Button onClick={() => setDefaultEntryType('credit')}>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Credit
+              </Button>
+            </SheetTrigger>
+          </Sheet>
+          <Sheet open={createSheetOpen} onOpenChange={setCreateSheetOpen}>
+            <SheetTrigger asChild>
+              <Button variant="outline" onClick={() => setDefaultEntryType('debit')}>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Debit
+              </Button>
+            </SheetTrigger>
+          </Sheet>
+        </div>
       </div>
 
-      {/* Entries List */}
+      {/* Entries Table */}
       <Card>
-        <CardHeader>
-          <CardTitle>Entries</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {entries.map((entry: any) => (
-              <div
-                key={entry._id}
-                className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors"
-              >
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <Badge variant={entry.type === 'credit' ? 'default' : 'destructive'}>
-                      {entry.type}
-                    </Badge>
-                    <span className="font-semibold text-lg">
-                      ${entry.amount.toFixed(2)}
-                    </span>
-                  </div>
-                  <div className="mt-1 text-sm text-muted-foreground">
-                    {format(new Date(entry.date), 'PPP')}
-                    {entry.time && ` at ${entry.time}`}
-                  </div>
-                  {entry.category && (
-                    <div className="mt-1">
-                      <Badge variant="outline">{entry.category}</Badge>
-                    </div>
-                  )}
-                  {entry.remark && (
-                    <p className="mt-2 text-sm">{entry.remark}</p>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleEdit(entry)}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDelete(entry._id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            ))}
-            {entries.length === 0 && (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">No entries yet</p>
-                <p className="text-sm text-muted-foreground">Add your first entry to get started</p>
-              </div>
-            )}
-          </div>
+        <CardContent className="pt-6">
+          {!entriesData && !error ? (
+            <div className="flex items-center justify-center py-8">
+              <Spinner variant="pinwheel" />
+            </div>
+          ) : entries.length === 0 ? (
+            <div className="flex items-center justify-center py-8">
+              <p className="text-muted-foreground">No entries yet. Add your first entry to get started.</p>
+            </div>
+          ) : (
+            <SimpleTable
+              data={entries}
+              columns={columns}
+              actions={actions}
+              showPagination={false}
+            />
+          )}
         </CardContent>
       </Card>
 
       {/* Create Entry Sheet */}
       <Sheet open={createSheetOpen} onOpenChange={setCreateSheetOpen}>
         <SheetContent>
-          <SheetHeader>
-            <SheetTitle>Create Entry</SheetTitle>
-          </SheetHeader>
-          <div className="mt-6">
+          <div className="h-full">
             <ExpenseEntryForm
               bookId={bookId}
               defaultType={defaultEntryType}
@@ -224,10 +285,7 @@ export default function ExpenseBookDetails({ bookId }: ExpenseBookDetailsProps) 
       {/* Edit Entry Sheet */}
       <Sheet open={editSheetOpen} onOpenChange={setEditSheetOpen}>
         <SheetContent>
-          <SheetHeader>
-            <SheetTitle>Edit Entry</SheetTitle>
-          </SheetHeader>
-          <div className="mt-6">
+          <div className="h-full">
             {selectedEntry && (
               <ExpenseEntryForm
                 bookId={bookId}
@@ -238,6 +296,19 @@ export default function ExpenseBookDetails({ bookId }: ExpenseBookDetailsProps) 
           </div>
         </SheetContent>
       </Sheet>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmationDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Entry"
+        description="Are you sure you want to delete this entry? This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="destructive"
+        isLoading={isDeleting}
+      />
     </div>
   );
 }

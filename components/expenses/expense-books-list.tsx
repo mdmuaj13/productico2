@@ -4,27 +4,43 @@ import { useState } from 'react';
 import { useExpenseBooks, deleteExpenseBook } from '@/hooks/expense-books';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Search, Edit, Trash2, BookOpen } from 'lucide-react';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Plus, Search, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import ExpenseBookForm from './expense-book-form';
+import { SimpleTable } from '@/components/simple-table';
+import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
+import { Spinner } from '../ui/shadcn-io/spinner';
+
+interface ExpenseBook {
+  _id: string;
+  name: string;
+  description?: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export default function ExpenseBooksList() {
   const router = useRouter();
   const [search, setSearch] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
   const [createSheetOpen, setCreateSheetOpen] = useState(false);
   const [editSheetOpen, setEditSheetOpen] = useState(false);
-  const [selectedBook, setSelectedBook] = useState<any>(null);
+  const [selectedBook, setSelectedBook] = useState<ExpenseBook | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deletingBook, setDeletingBook] = useState<ExpenseBook | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  const { data: booksData, mutate: mutateBooks } = useExpenseBooks({
+  const { data: booksData, error, mutate: mutateBooks } = useExpenseBooks({
     page: 1,
     limit: 100,
     search,
   });
 
   const books = booksData?.data || [];
+  const meta = booksData?.meta;
 
   const handleCreateSuccess = () => {
     setCreateSheetOpen(false);
@@ -39,137 +55,163 @@ export default function ExpenseBooksList() {
     toast.success('Expense book updated successfully');
   };
 
-  const handleEdit = (book: any) => {
+  const handleEdit = (book: ExpenseBook) => {
     setSelectedBook(book);
     setEditSheetOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this expense book?')) {
-      return;
-    }
+  const handleDeleteClick = (book: ExpenseBook) => {
+    setDeletingBook(book);
+    setDeleteDialogOpen(true);
+  };
 
+  const handleDeleteConfirm = async () => {
+    if (!deletingBook) return;
+
+    setIsDeleting(true);
     try {
-      await deleteExpenseBook(id);
-      mutateBooks();
+      await deleteExpenseBook(deletingBook._id);
       toast.success('Expense book deleted successfully');
-    } catch (error) {
+      mutateBooks();
+    } catch {
       toast.error('Failed to delete expense book');
-      console.error('Error deleting expense book:', error);
+    } finally {
+      setIsDeleting(false);
+      setDeleteDialogOpen(false);
+      setDeletingBook(null);
     }
   };
 
-  const handleViewDetails = (bookId: string) => {
-    router.push(`/app/expenses/${bookId}`);
+  const handleViewDetails = (book: ExpenseBook) => {
+    router.push(`/app/expenses/${book._id}`);
   };
+
+  const handleSearch = () => {
+    setSearch(searchTerm);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
+
+  const columns = [
+    {
+      key: 'name',
+      header: 'Book Name',
+    },
+    {
+      key: 'description',
+      header: 'Description',
+      render: (value: unknown) =>
+        value ? String(value) : 'No description'
+      ,
+    },
+    {
+      key: 'createdAt',
+      header: 'Created',
+      render: (value: unknown) => new Date(String(value)).toLocaleDateString(),
+    },
+  ];
+
+  const actions = [
+    {
+      label: 'View',
+      onClick: (book: ExpenseBook) => handleViewDetails(book),
+      variant: 'outline' as const,
+      icon: Eye,
+    },
+    {
+      label: 'Edit',
+      onClick: (book: ExpenseBook) => handleEdit(book),
+      variant: 'outline' as const,
+    },
+    {
+      label: 'Delete',
+      onClick: (book: ExpenseBook) => handleDeleteClick(book),
+      variant: 'destructive' as const,
+    },
+  ];
+
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <p className="text-center text-red-500">Failed to load expense books</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Expense Books</h2>
-          <p className="text-muted-foreground">Manage your expense books and track finances</p>
-        </div>
-        <Button onClick={() => setCreateSheetOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          New Book
-        </Button>
-      </div>
-
-      {/* Search */}
-      <div className="flex items-center gap-4">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search books..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-8"
-          />
-        </div>
-      </div>
-
-      {/* Books Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {books.map((book: any) => (
-          <Card key={book._id} className="hover:shadow-lg transition-shadow cursor-pointer">
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-2">
-                  <BookOpen className="h-5 w-5 text-primary" />
-                  <CardTitle className="text-lg">{book.name}</CardTitle>
-                </div>
+        <h1 className="text-2xl font-bold">Expense Books ({meta?.total || 0})</h1>
+        <div className="flex items-center gap-2">
+          <Sheet open={createSheetOpen} onOpenChange={setCreateSheetOpen}>
+            <SheetTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Expense Book
+              </Button>
+            </SheetTrigger>
+            <SheetContent>
+              <div className="h-full">
+                <ExpenseBookForm onSuccess={handleCreateSuccess} />
               </div>
-              {book.description && (
-                <CardDescription className="line-clamp-2">{book.description}</CardDescription>
-              )}
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={() => handleViewDetails(book._id)}
-                  className="flex-1"
-                >
-                  View Details
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleEdit(book)}
-                >
-                  <Edit className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleDelete(book._id)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+            </SheetContent>
+          </Sheet>
+        </div>
       </div>
 
-      {books.length === 0 && (
-        <div className="text-center py-12">
-          <BookOpen className="mx-auto h-12 w-12 text-muted-foreground" />
-          <h3 className="mt-4 text-lg font-semibold">No expense books found</h3>
-          <p className="text-muted-foreground">
-            {search ? 'Try a different search term' : 'Create your first expense book to get started'}
-          </p>
-          {!search && (
-            <Button onClick={() => setCreateSheetOpen(true)} className="mt-4">
-              <Plus className="mr-2 h-4 w-4" />
-              Create Book
-            </Button>
-          )}
-        </div>
-      )}
-
-      {/* Create Sheet */}
-      <Sheet open={createSheetOpen} onOpenChange={setCreateSheetOpen}>
-        <SheetContent>
-          <SheetHeader>
-            <SheetTitle>Create Expense Book</SheetTitle>
-          </SheetHeader>
-          <div className="mt-6">
-            <ExpenseBookForm onSuccess={handleCreateSuccess} />
+      {/* Expense Books Table */}
+      <Card>
+        <CardHeader>
+          <div className="flex gap-4 items-center">
+            <div className="flex-1">
+              <div className="relative">
+                <Input
+                  placeholder="Search expense books..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  className="pr-10"
+                />
+                <button
+                  onClick={handleSearch}
+                  className="absolute right-2 top-2.5 h-4 w-4 text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+                >
+                  <Search className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
           </div>
-        </SheetContent>
-      </Sheet>
+        </CardHeader>
+        <CardContent>
+          {!booksData && !error ? (
+            <div className="flex items-center justify-center py-8">
+              <Spinner variant="pinwheel" />
+            </div>
+          ) : books.length === 0 ? (
+            <div className="flex items-center justify-center py-8">
+              <p>No expense books found</p>
+            </div>
+          ) : (
+            <SimpleTable
+              data={books}
+              columns={columns}
+              actions={actions}
+              showPagination={false}
+            />
+          )}
+        </CardContent>
+      </Card>
 
       {/* Edit Sheet */}
       <Sheet open={editSheetOpen} onOpenChange={setEditSheetOpen}>
         <SheetContent>
-          <SheetHeader>
-            <SheetTitle>Edit Expense Book</SheetTitle>
-          </SheetHeader>
-          <div className="mt-6">
+          <div className="h-full">
             {selectedBook && (
               <ExpenseBookForm
                 book={selectedBook}
@@ -179,6 +221,19 @@ export default function ExpenseBooksList() {
           </div>
         </SheetContent>
       </Sheet>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmationDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Expense Book"
+        description={`Are you sure you want to delete "${deletingBook?.name}"? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="destructive"
+        isLoading={isDeleting}
+      />
     </div>
   );
 }
