@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import dbConnect from '@/lib/db';
 import User from '@/models/User';
 import Subscription from '@/models/Subscription';
 import { assignSubscriptionSchema } from '@/lib/validations/subscription';
-import { ZodError } from 'zod';
+import { ApiSerializer } from '@/types';
 
 // POST /api/subscriptions/assign - Assign subscription to user
 export async function POST(request: NextRequest) {
@@ -11,7 +11,13 @@ export async function POST(request: NextRequest) {
 		await dbConnect();
 
 		const body = await request.json();
-		const validatedData = assignSubscriptionSchema.parse(body);
+
+		const validation = assignSubscriptionSchema.safeParse(body);
+		if (!validation.success) {
+			return ApiSerializer.error(validation.error.issues[0].message, 400);
+		}
+
+		const validatedData = validation.data;
 
 		// Verify subscription exists
 		const subscription = await Subscription.findOne({
@@ -20,10 +26,7 @@ export async function POST(request: NextRequest) {
 		});
 
 		if (!subscription) {
-			return NextResponse.json(
-				{ error: 'Subscription not found' },
-				{ status: 404 }
-			);
+			return ApiSerializer.notFound('Subscription not found');
 		}
 
 		// Update user
@@ -39,33 +42,18 @@ export async function POST(request: NextRequest) {
 		).populate('subscription');
 
 		if (!user) {
-			return NextResponse.json({ error: 'User not found' }, { status: 404 });
+			return ApiSerializer.notFound('User not found');
 		}
 
-		return NextResponse.json({
-			message: 'Subscription assigned successfully',
-			data: {
-				userId: user._id,
-				subscription: user.subscription,
-				subscriptionOverride: user.subscriptionOverride,
-			},
-		});
+		const responseData = {
+			userId: user._id,
+			subscription: user.subscription,
+			subscriptionOverride: user.subscriptionOverride,
+		};
+
+		return ApiSerializer.success(responseData, 'Subscription assigned successfully');
 	} catch (error) {
 		console.error('Error assigning subscription:', error);
-
-		if (error instanceof ZodError) {
-			return NextResponse.json(
-				{ error: 'Validation error', details: error.issues },
-				{ status: 400 }
-			);
-		}
-
-		return NextResponse.json(
-			{
-				error: 'Failed to assign subscription',
-				details: error instanceof Error ? error.message : 'Unknown error',
-			},
-			{ status: 500 }
-		);
+		return ApiSerializer.error('Failed to assign subscription');
 	}
 }

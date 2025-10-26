@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import dbConnect from '@/lib/db';
 import Subscription from '@/models/Subscription';
 import { updateSubscriptionSchema } from '@/lib/validations/subscription';
-import { ZodError } from 'zod';
+import { ApiSerializer } from '@/types';
 
 // GET /api/subscriptions/[id] - Get single subscription
 export async function GET(
@@ -18,22 +18,13 @@ export async function GET(
 		}).lean();
 
 		if (!subscription) {
-			return NextResponse.json(
-				{ error: 'Subscription not found' },
-				{ status: 404 }
-			);
+			return ApiSerializer.notFound('Subscription not found');
 		}
 
-		return NextResponse.json(subscription);
+		return ApiSerializer.success(subscription, 'Subscription retrieved successfully');
 	} catch (error) {
 		console.error('Error fetching subscription:', error);
-		return NextResponse.json(
-			{
-				error: 'Failed to fetch subscription',
-				details: error instanceof Error ? error.message : 'Unknown error',
-			},
-			{ status: 500 }
-		);
+		return ApiSerializer.error('Failed to fetch subscription');
 	}
 }
 
@@ -46,39 +37,26 @@ export async function PUT(
 		await dbConnect();
 
 		const body = await request.json();
-		const validatedData = updateSubscriptionSchema.parse(body);
+
+		const validation = updateSubscriptionSchema.safeParse(body);
+		if (!validation.success) {
+			return ApiSerializer.error(validation.error.issues[0].message, 400);
+		}
 
 		const subscription = await Subscription.findOneAndUpdate(
 			{ _id: params.id, deletedAt: null },
-			{ $set: validatedData },
+			{ $set: validation.data },
 			{ new: true, runValidators: true }
 		);
 
 		if (!subscription) {
-			return NextResponse.json(
-				{ error: 'Subscription not found' },
-				{ status: 404 }
-			);
+			return ApiSerializer.notFound('Subscription not found');
 		}
 
-		return NextResponse.json(subscription);
+		return ApiSerializer.success(subscription, 'Subscription updated successfully');
 	} catch (error) {
 		console.error('Error updating subscription:', error);
-
-		if (error instanceof ZodError) {
-			return NextResponse.json(
-				{ error: 'Validation error', details: error.issues },
-				{ status: 400 }
-			);
-		}
-
-		return NextResponse.json(
-			{
-				error: 'Failed to update subscription',
-				details: error instanceof Error ? error.message : 'Unknown error',
-			},
-			{ status: 500 }
-		);
+		return ApiSerializer.error('Failed to update subscription');
 	}
 }
 
@@ -97,23 +75,12 @@ export async function DELETE(
 		);
 
 		if (!subscription) {
-			return NextResponse.json(
-				{ error: 'Subscription not found' },
-				{ status: 404 }
-			);
+			return ApiSerializer.notFound('Subscription not found');
 		}
 
-		return NextResponse.json({
-			message: 'Subscription deleted successfully',
-		});
+		return ApiSerializer.success(null, 'Subscription deleted successfully');
 	} catch (error) {
 		console.error('Error deleting subscription:', error);
-		return NextResponse.json(
-			{
-				error: 'Failed to delete subscription',
-				details: error instanceof Error ? error.message : 'Unknown error',
-			},
-			{ status: 500 }
-		);
+		return ApiSerializer.error('Failed to delete subscription');
 	}
 }

@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import dbConnect from '@/lib/db';
 import Subscription from '@/models/Subscription';
 import { createSubscriptionSchema } from '@/lib/validations/subscription';
-import { ZodError } from 'zod';
+import { ApiSerializer } from '@/types';
 
 // GET /api/subscriptions - Get all subscription plans
 export async function GET(request: NextRequest) {
@@ -42,24 +42,17 @@ export async function GET(request: NextRequest) {
 			.limit(limit)
 			.lean();
 
-		return NextResponse.json({
-			data: subscriptions,
-			meta: {
-				total,
-				page,
-				limit,
-				totalPages: Math.ceil(total / limit),
-			},
-		});
+		const meta = {
+			total,
+			page,
+			limit,
+			totalPages: Math.ceil(total / limit),
+		};
+
+		return ApiSerializer.success(subscriptions, 'Subscriptions retrieved successfully', meta);
 	} catch (error) {
 		console.error('Error fetching subscriptions:', error);
-		return NextResponse.json(
-			{
-				error: 'Failed to fetch subscriptions',
-				details: error instanceof Error ? error.message : 'Unknown error',
-			},
-			{ status: 500 }
-		);
+		return ApiSerializer.error('Failed to fetch subscriptions');
 	}
 }
 
@@ -69,27 +62,17 @@ export async function POST(request: NextRequest) {
 		await dbConnect();
 
 		const body = await request.json();
-		const validatedData = createSubscriptionSchema.parse(body);
 
-		const subscription = await Subscription.create(validatedData);
-
-		return NextResponse.json(subscription, { status: 201 });
-	} catch (error) {
-		console.error('Error creating subscription:', error);
-
-		if (error instanceof ZodError) {
-			return NextResponse.json(
-				{ error: 'Validation error', details: error.issues },
-				{ status: 400 }
-			);
+		const validation = createSubscriptionSchema.safeParse(body);
+		if (!validation.success) {
+			return ApiSerializer.error(validation.error.issues[0].message, 400);
 		}
 
-		return NextResponse.json(
-			{
-				error: 'Failed to create subscription',
-				details: error instanceof Error ? error.message : 'Unknown error',
-			},
-			{ status: 500 }
-		);
+		const subscription = await Subscription.create(validation.data);
+
+		return ApiSerializer.created(subscription, 'Subscription created successfully');
+	} catch (error) {
+		console.error('Error creating subscription:', error);
+		return ApiSerializer.error('Failed to create subscription');
 	}
 }
