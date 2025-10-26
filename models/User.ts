@@ -24,6 +24,15 @@ const UserSchema = new mongoose.Schema(
 			type: String,
 			default: null,
 		},
+		subscription: {
+			type: mongoose.Schema.Types.ObjectId,
+			ref: 'Subscription',
+			default: null,
+		},
+		subscriptionOverride: {
+			type: mongoose.Schema.Types.Mixed,
+			default: null,
+		},
 		deletedAt: {
 			type: Date,
 			default: null,

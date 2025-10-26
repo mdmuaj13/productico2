@@ -16,6 +16,7 @@ import {
 	IconBuilding,
 	IconFileInvoice,
 	IconReceipt,
+	IconCreditCard,
 } from '@tabler/icons-react';
 
 import { NavDocuments } from '@/components/nav-documents';
@@ -84,6 +85,11 @@ const data = {
 			title: 'Expenses',
 			url: '/app/expenses',
 			icon: IconReceipt,
+		},
+		{
+			title: 'Subscriptions',
+			url: '/app/subscriptions',
+			icon: IconCreditCard,
 		},
 	],
 	navClouds: [],
