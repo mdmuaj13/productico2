@@ -98,26 +98,25 @@ export default function ExpenseBooksList() {
       key: 'description',
       header: 'Description',
       render: (value: unknown) =>
-        value ? String(value) : 'No description'
-      ,
+        value ? String(value).substring(0, 20) + '...' : '',
     },
-    {
-      key: 'creditTotal',
-      header: 'Total Credit',
-      render: (value: unknown) => `$${Number(value).toFixed(2)}`,
-    },
-    {
-      key: 'debitTotal',
-      header: 'Total Debit',
-      render: (value: unknown) => `$${Number(value).toFixed(2)}`,
-    },
+    // {
+    //   key: 'creditTotal',
+    //   header: 'Total Credit',
+    //   render: (value: unknown) => value ? `$${Number(value).toFixed(2)}` : '0',
+    // },
+    // {
+    //   key: 'debitTotal',
+    //   header: 'Total Debit',
+    //   render: (value: unknown) => value ? `$${Number(value).toFixed(2)}` : '0',
+    // },
     {
       key: 'netBalance',
       header: 'Net Balance',
       render: (value: unknown) => {
         const balance = Number(value);
         const className = balance >= 0 ? 'text-green-600' : 'text-red-600';
-        return <span className={className}>${balance.toFixed(2)}</span>;
+        return value ? <span className={className}>${balance.toFixed(2)}</span> : '0';
       },
     },
     {
@@ -129,7 +128,7 @@ export default function ExpenseBooksList() {
 
   const actions = [
     {
-      label: 'View',
+      label: 'Details',
       onClick: (book: IExpenseBook) => handleViewDetails(book),
       variant: 'outline' as const,
       icon: Eye,
@@ -139,11 +138,11 @@ export default function ExpenseBooksList() {
       onClick: (book: IExpenseBook) => handleEdit(book),
       variant: 'outline' as const,
     },
-    {
-      label: 'Delete',
-      onClick: (book: IExpenseBook) => handleDeleteClick(book),
-      variant: 'destructive' as const,
-    },
+    // {
+    //   label: 'Delete',
+    //   onClick: (book: IExpenseBook) => handleDeleteClick(book),
+    //   variant: 'destructive' as const,
+    // },
   ];
 
   if (error) {

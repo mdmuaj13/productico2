@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Plus, TrendingUp, TrendingDown, Wallet, Search } from 'lucide-react';
+import { ArrowLeft, Plus, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import ExpenseEntryForm from './expense-entry-form';
@@ -183,41 +183,46 @@ export default function ExpenseBookDetails({ bookId }: ExpenseBookDetailsProps) 
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Credit</CardTitle>
-            <TrendingUp className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              ${book?.creditTotal?.toFixed(2) || '0.00'}
+      <div className="grid gap-3 md:grid-cols-3">
+        <Card className="border-l-4 border-l-green-500">
+          <CardContent className="p-4">
+            <div className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                Total Credit
+              </span>
+              <span className="text-2xl font-semibold">
+                ${book?.creditTotal?.toFixed(2) || '0.00'}
+              </span>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Debit</CardTitle>
-            <TrendingDown className="h-4 w-4 text-red-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">
-              ${book?.debitTotal?.toFixed(2) || '0.00'}
+        <Card className="border-l-4 border-l-red-500">
+          <CardContent className="p-4">
+            <div className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                Total Debit
+              </span>
+              <span className="text-2xl font-semibold">
+                ${book?.debitTotal?.toFixed(2) || '0.00'}
+              </span>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Net Balance</CardTitle>
-            <Wallet className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className={`text-2xl font-bold ${
-              (book?.netBalance || 0) >= 0 ? 'text-green-600' : 'text-red-600'
-            }`}>
-              ${book?.netBalance?.toFixed(2) || '0.00'}
+        <Card className={`border-l-4 ${
+          (book?.netBalance || 0) >= 0 ? 'border-l-blue-500' : 'border-l-orange-500'
+        }`}>
+          <CardContent className="p-4">
+            <div className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                Net Balance
+              </span>
+              <span className={`text-2xl font-semibold ${
+                (book?.netBalance || 0) >= 0 ? 'text-blue-600' : 'text-orange-600'
+              }`}>
+                ${book?.netBalance?.toFixed(2) || '0.00'}
+              </span>
             </div>
           </CardContent>
         </Card>
