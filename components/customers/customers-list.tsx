@@ -213,8 +213,8 @@ export function CustomersList() {
 			</div>
 
 			{/* Customers Table */}
-			<Card>
-				<CardContent>
+			<>
+				<>
 					{!customersData && !error ? (
 						<div className="flex items-center justify-center py-8">
 							<Spinner variant="pinwheel" />
@@ -231,8 +231,8 @@ export function CustomersList() {
 							showPagination={false}
 						/>
 					)}
-				</CardContent>
-			</Card>
+				</>
+			</>
 
 			{/* View Sheet */}
 			<Sheet open={viewSheetOpen} onOpenChange={setViewSheetOpen}>

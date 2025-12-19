@@ -78,11 +78,14 @@ export function StockForm({ onSuccess }: StockFormProps) {
 	// Initialize variant stocks when product changes
 	useEffect(() => {
 		if (formData.productId) {
-			if (variants.length > 0) {
+			const product = products.find((p: { _id: string }) => p._id === formData.productId);
+			const productVariants = product?.variants || [];
+
+			if (productVariants.length > 0) {
 				// Product has variants - create entry for each variant
 				setFormData((prev) => ({
 					...prev,
-					variantStocks: variants.map((variant: { name: string }) => ({
+					variantStocks: productVariants.map((variant: { name: string }) => ({
 						variantName: variant.name,
 						quantity: 0,
 						reorderPoint: 0,
@@ -107,7 +110,7 @@ export function StockForm({ onSuccess }: StockFormProps) {
 				variantStocks: [],
 			}));
 		}
-	}, [formData.productId, variants]);
+	}, [formData.productId, products]);
 
 	const handleChange = (name: string, value: string) => {
 		setFormData((prev) => ({

@@ -34,7 +34,9 @@ export function CategoriesList() {
 	const [editingCategory, setEditingCategory] = useState<Category | null>(null);
 	const [viewingCategory, setViewingCategory] = useState<Category | null>(null);
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-	const [deletingCategory, setDeletingCategory] = useState<Category | null>(null);
+	const [deletingCategory, setDeletingCategory] = useState<Category | null>(
+		null
+	);
 	const [isDeleting, setIsDeleting] = useState(false);
 
 	const {
@@ -123,9 +125,7 @@ export function CategoriesList() {
 			key: 'slug',
 			header: 'Slug',
 			render: (value: unknown) => (
-				<span className="font-mono text-sm">
-					{value ? String(value) : '-'}
-				</span>
+				<span className="font-mono text-sm">{value ? String(value) : '-'}</span>
 			),
 		},
 		{
@@ -141,9 +141,7 @@ export function CategoriesList() {
 			key: 'serialNo',
 			header: 'Serial No',
 			render: (value: unknown) => (
-				<span className="font-mono">
-					{value ? String(value) : '0'}
-				</span>
+				<span className="font-mono">{value ? String(value) : '0'}</span>
 			),
 		},
 		{
@@ -216,26 +214,24 @@ export function CategoriesList() {
 			</div>
 
 			{/* Categories Table */}
-			<Card>
-				<CardContent>
-					{!categoriesData && !error ? (
-						<div className="flex items-center justify-center py-8">
-							<Spinner variant="pinwheel" />
-						</div>
-					) : categories.length === 0 ? (
-						<div className="flex items-center justify-center py-8">
-							<p>No categories found</p>
-						</div>
-					) : (
-						<SimpleTable
-							data={categories}
-							columns={columns}
-							actions={actions}
-							showPagination={false}
-						/>
-					)}
-				</CardContent>
-			</Card>
+			<>
+				{!categoriesData && !error ? (
+					<div className="flex items-center justify-center py-8">
+						<Spinner variant="pinwheel" />
+					</div>
+				) : categories.length === 0 ? (
+					<div className="flex items-center justify-center py-8">
+						<p>No categories found</p>
+					</div>
+				) : (
+					<SimpleTable
+						data={categories}
+						columns={columns}
+						actions={actions}
+						showPagination={false}
+					/>
+				)}
+			</>
 
 			{/* View Sheet */}
 			<Sheet open={viewSheetOpen} onOpenChange={setViewSheetOpen}>

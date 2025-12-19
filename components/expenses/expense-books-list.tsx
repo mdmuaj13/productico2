@@ -177,47 +177,43 @@ export default function ExpenseBooksList() {
       </div>
 
       {/* Expense Books Table */}
-      <Card>
-        <CardHeader>
-          <div className="flex gap-4 items-center">
-            <div className="flex-1">
-              <div className="relative">
-                <Input
-                  placeholder="Search expense books..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  className="pr-10"
-                />
-                <button
-                  onClick={handleSearch}
-                  className="absolute right-2 top-2.5 h-4 w-4 text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
-                >
-                  <Search className="h-4 w-4" />
-                </button>
-              </div>
+      <div className="space-y-4">
+        <div className="flex gap-4 items-center">
+          <div className="flex-1">
+            <div className="relative">
+              <Input
+                placeholder="Search expense books..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onKeyDown={handleKeyDown}
+                className="pr-10"
+              />
+              <button
+                onClick={handleSearch}
+                className="absolute right-2 top-2.5 h-4 w-4 text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+              >
+                <Search className="h-4 w-4" />
+              </button>
             </div>
           </div>
-        </CardHeader>
-        <CardContent>
-          {!booksData && !error ? (
-            <div className="flex items-center justify-center py-8">
-              <Spinner variant="pinwheel" />
-            </div>
-          ) : books.length === 0 ? (
-            <div className="flex items-center justify-center py-8">
-              <p>No expense books found</p>
-            </div>
-          ) : (
-            <SimpleTable
-              data={books}
-              columns={columns}
-              actions={actions}
-              showPagination={false}
-            />
-          )}
-        </CardContent>
-      </Card>
+        </div>
+        {!booksData && !error ? (
+          <div className="flex items-center justify-center py-8">
+            <Spinner variant="pinwheel" />
+          </div>
+        ) : books.length === 0 ? (
+          <div className="flex items-center justify-center py-8">
+            <p>No expense books found</p>
+          </div>
+        ) : (
+          <SimpleTable
+            data={books}
+            columns={columns}
+            actions={actions}
+            showPagination={false}
+          />
+        )}
+      </div>
 
       {/* Edit Sheet */}
       <Sheet open={editSheetOpen} onOpenChange={setEditSheetOpen}>

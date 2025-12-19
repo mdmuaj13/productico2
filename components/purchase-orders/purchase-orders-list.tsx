@@ -238,61 +238,57 @@ export function PurchaseOrdersList() {
 			</div>
 
 			{/* Purchase Orders Table */}
-			<Card>
-				<CardHeader>
-					<div className="flex gap-4 items-center">
-						<div className="flex-1">
-							<div className="relative">
-								<Input
-									placeholder="Search purchase orders..."
-									value={searchTerm}
-									onChange={(e) => setSearchTerm(e.target.value)}
-									onKeyDown={handleKeyDown}
-									className="pr-10"
-								/>
-								<button
-									onClick={handleSearch}
-									className="absolute right-2 top-2.5 h-4 w-4 text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
-								>
-									<Search className="h-4 w-4" />
-								</button>
-							</div>
-						</div>
-						<div className="w-48">
-							<Select value={statusFilter} onValueChange={setStatusFilter}>
-								<SelectTrigger>
-									<SelectValue placeholder="Filter by status" />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="all">All statuses</SelectItem>
-									<SelectItem value="pending">Pending</SelectItem>
-									<SelectItem value="approved">Approved</SelectItem>
-									<SelectItem value="received">Received</SelectItem>
-									<SelectItem value="cancelled">Cancelled</SelectItem>
-								</SelectContent>
-							</Select>
+			<div className="space-y-4">
+				<div className="flex gap-4 items-center">
+					<div className="flex-1">
+						<div className="relative">
+							<Input
+								placeholder="Search purchase orders..."
+								value={searchTerm}
+								onChange={(e) => setSearchTerm(e.target.value)}
+								onKeyDown={handleKeyDown}
+								className="pr-10"
+							/>
+							<button
+								onClick={handleSearch}
+								className="absolute right-2 top-2.5 h-4 w-4 text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+							>
+								<Search className="h-4 w-4" />
+							</button>
 						</div>
 					</div>
-				</CardHeader>
-				<CardContent>
-					{!purchaseOrdersData && !error ? (
-						<div className="flex items-center justify-center py-8">
-							<Spinner variant="pinwheel" />
-						</div>
-					) : purchaseOrders.length === 0 ? (
-						<div className="flex items-center justify-center py-8">
-							<p>No purchase orders found</p>
-						</div>
-					) : (
-						<SimpleTable
-							data={purchaseOrders}
-							columns={columns}
-							actions={actions}
-							showPagination={false}
-						/>
-					)}
-				</CardContent>
-			</Card>
+					<div className="w-48">
+						<Select value={statusFilter} onValueChange={setStatusFilter}>
+							<SelectTrigger>
+								<SelectValue placeholder="Filter by status" />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="all">All statuses</SelectItem>
+								<SelectItem value="pending">Pending</SelectItem>
+								<SelectItem value="approved">Approved</SelectItem>
+								<SelectItem value="received">Received</SelectItem>
+								<SelectItem value="cancelled">Cancelled</SelectItem>
+							</SelectContent>
+						</Select>
+					</div>
+				</div>
+				{!purchaseOrdersData && !error ? (
+					<div className="flex items-center justify-center py-8">
+						<Spinner variant="pinwheel" />
+					</div>
+				) : purchaseOrders.length === 0 ? (
+					<div className="flex items-center justify-center py-8">
+						<p>No purchase orders found</p>
+					</div>
+				) : (
+					<SimpleTable
+						data={purchaseOrders}
+						columns={columns}
+						actions={actions}
+						showPagination={false}
+					/>
+				)}
+			</div>
 
 			{/* View Sheet */}
 			<Sheet open={viewSheetOpen} onOpenChange={setViewSheetOpen}>

@@ -211,26 +211,24 @@ export function ProductsList() {
 			</div>
 
 			{/* Products Table */}
-			<Card>
-				<CardContent>
-					{!productsData && !error ? (
-						<div className="flex items-center justify-center py-8">
-							<Spinner variant="pinwheel" />
-						</div>
-					) : products.length === 0 ? (
-						<div className="flex items-center justify-center py-8">
-							<p>No products found</p>
-						</div>
-					) : (
-						<SimpleTable
-							data={products}
-							columns={columns}
-							actions={actions}
-							showPagination={false}
-						/>
-					)}
-				</CardContent>
-			</Card>
+			<>
+				{!productsData && !error ? (
+					<div className="flex items-center justify-center py-8">
+						<Spinner variant="pinwheel" />
+					</div>
+				) : products.length === 0 ? (
+					<div className="flex items-center justify-center py-8">
+						<p>No products found</p>
+					</div>
+				) : (
+					<SimpleTable
+						data={products}
+						columns={columns}
+						actions={actions}
+						showPagination={false}
+					/>
+				)}
+			</>
 
 			{/* View Sheet */}
 			<Sheet open={viewSheetOpen} onOpenChange={setViewSheetOpen}>

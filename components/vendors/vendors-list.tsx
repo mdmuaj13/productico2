@@ -200,26 +200,24 @@ export function VendorsList() {
 			</div>
 
 			{/* Vendors Table */}
-			<Card>
-				<CardContent>
-					{!vendorsData && !error ? (
-						<div className="flex items-center justify-center py-8">
-							<Spinner variant="pinwheel" />
-						</div>
-					) : vendors.length === 0 ? (
-						<div className="flex items-center justify-center py-8">
-							<p>No vendors found</p>
-						</div>
-					) : (
-						<SimpleTable
-							data={vendors}
-							columns={columns}
-							actions={actions}
-							showPagination={false}
-						/>
-					)}
-				</CardContent>
-			</Card>
+			<>
+				{!vendorsData && !error ? (
+					<div className="flex items-center justify-center py-8">
+						<Spinner variant="pinwheel" />
+					</div>
+				) : vendors.length === 0 ? (
+					<div className="flex items-center justify-center py-8">
+						<p>No vendors found</p>
+					</div>
+				) : (
+					<SimpleTable
+						data={vendors}
+						columns={columns}
+						actions={actions}
+						showPagination={false}
+					/>
+				)}
+			</>
 
 			{/* View Sheet */}
 			<Sheet open={viewSheetOpen} onOpenChange={setViewSheetOpen}>
