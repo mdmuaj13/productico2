@@ -14,7 +14,7 @@ import {
 	SelectValue,
 } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Trash2, Search, Package, DollarSign, User, ShoppingCart, X, Minus } from 'lucide-react';
+import { Plus, Trash2, Search, Package, DollarSign, User, ShoppingCart, X, Minus, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import { OrderFormData } from '@/types/order';
 import { SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -46,7 +46,7 @@ export function OrderForm({ onSuccess }: OrderFormProps) {
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [orderProducts, setOrderProducts] = useState<OrderProductItem[]>([]);
 	const [orderDate, setOrderDate] = useState(
-		new Date().toISOString().split('T')[0]
+		new Date().toISOString().slice(0, 16)
 	);
 	const [searchQuery, setSearchQuery] = useState('');
 	const [showProductSearch, setShowProductSearch] = useState(false);
@@ -242,17 +242,17 @@ export function OrderForm({ onSuccess }: OrderFormProps) {
 				</SheetTitle>
 			</SheetHeader>
 
-			<form onSubmit={handleSubmit(onSubmit)} className="space-y-6 pb-6">
-				<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+			<form onSubmit={handleSubmit(onSubmit)} className="space-y-4 pb-6">
+				<div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
 					{/* Customer Information */}
 					<Card>
-						<CardHeader className="pb-3">
+						<CardHeader>
 							<div className="flex items-center gap-2">
 								<User className="h-4 w-4" />
 								<CardTitle className="text-base">Customer Information</CardTitle>
 							</div>
 						</CardHeader>
-						<CardContent className="space-y-4">
+						<CardContent className="p-2">
 							<div className="space-y-3">
 								<div>
 									<Label htmlFor="name" className="text-sm">
@@ -271,7 +271,7 @@ export function OrderForm({ onSuccess }: OrderFormProps) {
 									)}
 								</div>
 
-								<div className="grid grid-cols-2 gap-3">
+								<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
 									<div>
 										<Label htmlFor="contact_number" className="text-sm">
 											Contact <span className="text-red-500">*</span>
@@ -318,33 +318,19 @@ export function OrderForm({ onSuccess }: OrderFormProps) {
 									)}
 								</div>
 
-								<div className="grid grid-cols-2 gap-3">
-									<div>
-										<Label htmlFor="city" className="text-sm">
-											City <span className="text-red-500">*</span>
-										</Label>
-										<Input
-											id="city"
-											{...register('city', { required: 'City is required' })}
-											placeholder="City"
-											className={cn(errors.city && 'border-red-500')}
-										/>
-										{errors.city && (
-											<p className="text-xs text-red-500 mt-1">{errors.city.message}</p>
-										)}
-									</div>
-									<div>
-										<Label htmlFor="order_date" className="text-sm">Order Date</Label>
-										<Input
-											id="order_date"
-											type="date"
-											value={orderDate}
-											onChange={(e) => {
-												setOrderDate(e.target.value);
-												setValue('order_date', new Date(e.target.value).toISOString());
-											}}
-										/>
-									</div>
+								<div>
+									<Label htmlFor="city" className="text-sm">
+										City <span className="text-red-500">*</span>
+									</Label>
+									<Input
+										id="city"
+										{...register('city', { required: 'City is required' })}
+										placeholder="City"
+										className={cn(errors.city && 'border-red-500')}
+									/>
+									{errors.city && (
+										<p className="text-xs text-red-500 mt-1">{errors.city.message}</p>
+									)}
 								</div>
 							</div>
 						</CardContent>
@@ -352,13 +338,13 @@ export function OrderForm({ onSuccess }: OrderFormProps) {
 
 					{/* Order Details */}
 					<Card>
-						<CardHeader className="pb-3">
+						<CardHeader>
 							<div className="flex items-center gap-2">
 								<Package className="h-4 w-4" />
 								<CardTitle className="text-base">Order Details</CardTitle>
 							</div>
 						</CardHeader>
-						<CardContent className="space-y-4">
+						<CardContent className="p-2">
 							<div className="space-y-3">
 								<div>
 									<Label htmlFor="order_code" className="text-sm">Order Code</Label>
@@ -370,7 +356,23 @@ export function OrderForm({ onSuccess }: OrderFormProps) {
 									/>
 								</div>
 
-								<div className="grid grid-cols-2 gap-3">
+								<div>
+									<Label htmlFor="order_date" className="text-sm flex items-center gap-2">
+										<Clock className="h-4 w-4" />
+										Order Date & Time
+									</Label>
+									<Input
+										id="order_date"
+										type="datetime-local"
+										value={orderDate}
+										onChange={(e) => {
+											setOrderDate(e.target.value);
+											setValue('order_date', new Date(e.target.value).toISOString());
+										}}
+									/>
+								</div>
+
+								<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
 									<div>
 										<Label htmlFor="order_status" className="text-sm">Order Status</Label>
 										<Controller
@@ -449,8 +451,8 @@ export function OrderForm({ onSuccess }: OrderFormProps) {
 
 				{/* Products Section */}
 				<Card>
-					<CardHeader>
-						<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+					<CardHeader className="pb-2">
+						<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
 							<div className="flex items-center gap-2">
 								<Package className="h-4 w-4" />
 								<CardTitle className="text-base">Products ({orderProducts.length})</CardTitle>
@@ -460,13 +462,14 @@ export function OrderForm({ onSuccess }: OrderFormProps) {
 								onClick={() => setShowProductSearch(true)}
 								size="sm"
 								variant="outline"
+								className="w-full sm:w-auto"
 							>
 								<Plus className="h-4 w-4 mr-1" />
 								Add Product
 							</Button>
 						</div>
 					</CardHeader>
-					<CardContent>
+					<CardContent className="p-4">
 						{orderProducts.length === 0 ? (
 							<div className="text-center py-8 text-muted-foreground">
 								<Package className="h-12 w-12 mx-auto mb-2 opacity-20" />
@@ -478,77 +481,78 @@ export function OrderForm({ onSuccess }: OrderFormProps) {
 								{orderProducts.map((product, index) => (
 									<div
 										key={product._id}
-										className="border rounded-lg p-3 hover:bg-accent/30 transition-colors flex flex-col sm:flex-row"
+										className="border rounded-lg p-3 hover:bg-accent/30 transition-colors"
 									>
-										<div className="flex-1 flex items-start gap-3">
+										<div className="flex gap-3 mb-3">
 											{product.thumbnail && (
 												<div className="bg-gray-100 rounded p-1 flex-shrink-0">
-													<img 
-														src={product.thumbnail} 
-														alt={product.productTitle} 
-														className="w-10 h-10 object-cover rounded" 
+													<img
+														src={product.thumbnail}
+														alt={product.productTitle}
+														className="w-12 h-12 sm:w-10 sm:h-10 object-cover rounded"
 													/>
 												</div>
 											)}
-											<div className="min-w-0">
-												<div className="flex items-center gap-2">
-													<h4 className="font-medium text-sm truncate max-w-[200px]">{product.productTitle}</h4>
+											<div className="flex-1 min-w-0">
+												<div className="flex flex-col sm:flex-row sm:items-center gap-2">
+													<h4 className="font-medium text-sm truncate">{product.productTitle}</h4>
 													{product.variantName && (
-														<Badge variant="secondary" className="text-xs">
+														<Badge variant="secondary" className="text-xs w-fit">
 															{product.variantName}
 														</Badge>
 													)}
 												</div>
-												<div className="flex items-center gap-2 mt-1">
-													<Badge variant="outline" className="text-xs">
-														{product.warehouseName}
-													</Badge>
+												<div className="flex flex-wrap items-center gap-2 mt-1">
+													{product.warehouseName && (
+														<Badge variant="outline" className="text-xs">
+															{product.warehouseName}
+														</Badge>
+													)}
 													<span className="text-xs text-muted-foreground">
 														৳{product.salePrice || product.price} each
 													</span>
 												</div>
 											</div>
+											<Button
+												type="button"
+												variant="ghost"
+												size="sm"
+												className="h-8 w-8 p-0 text-red-500 hover:text-red-600 flex-shrink-0"
+												onClick={() => removeProduct(index)}
+											>
+												<Trash2 className="h-4 w-4" />
+											</Button>
 										</div>
-										
-										<div className="flex items-center justify-between sm:justify-end mt-3 sm:mt-0 gap-4">
+
+										<div className="flex items-center justify-between">
 											<div className="flex items-center gap-2">
 												<Button
 													type="button"
 													variant="outline"
 													size="sm"
-													className="h-7 w-7 p-0 rounded-full"
+													className="h-8 w-8 p-0 rounded-full"
 													onClick={() => updateProductQuantity(index, product.quantity - 1)}
 													disabled={product.quantity <= 1}
 												>
 													<Minus className="h-3 w-3" />
 												</Button>
-												<span className="text-sm font-medium min-w-[20px] text-center">
+												<span className="text-sm font-medium min-w-[24px] text-center">
 													{product.quantity}
 												</span>
 												<Button
 													type="button"
 													variant="outline"
 													size="sm"
-													className="h-7 w-7 p-0 rounded-full"
+													className="h-8 w-8 p-0 rounded-full"
 													onClick={() => updateProductQuantity(index, product.quantity + 1)}
 												>
 													<Plus className="h-3 w-3" />
 												</Button>
 											</div>
-											
+
 											<div className="text-sm font-semibold">
 												৳{product.lineTotal.toFixed(2)}
 											</div>
-											
-											<Button
-												type="button"
-												variant="ghost"
-												size="sm"
-												className="h-8 w-8 p-0 text-red-500 hover:text-red-600"
-												onClick={() => removeProduct(index)}
-											>
-												<Trash2 className="h-4 w-4" />
-											</Button>
 										</div>
 									</div>
 								))}
@@ -559,20 +563,20 @@ export function OrderForm({ onSuccess }: OrderFormProps) {
 
 				{/* Financial Summary */}
 				<Card>
-					<CardHeader>
+					<CardHeader className="pb-2">
 						<div className="flex items-center gap-2">
 							<DollarSign className="h-4 w-4" />
 							<CardTitle className="text-base">Financial Summary</CardTitle>
 						</div>
 					</CardHeader>
-					<CardContent className="space-y-4">
+					<CardContent className="space-y-3 p-2">
 						<div className="space-y-3">
 							<div className="flex justify-between items-center border-b pb-2">
 								<span className="text-sm">Subtotal ({orderProducts.length} items)</span>
 								<span className="font-medium">৳{subTotal.toFixed(2)}</span>
 							</div>
 							
-							<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+							<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
 								<div>
 									<Label htmlFor="discount_amount" className="text-sm">Discount (৳)</Label>
 									<Input
@@ -631,7 +635,7 @@ export function OrderForm({ onSuccess }: OrderFormProps) {
 				</Card>
 
 				{/* Submit Button */}
-				<div className="sticky bottom-0 bg-background pt-4 pb-2 border-t">
+				<div className="sticky bottom-0 bg-background pt-3 pb-2 border-t">
 					<Button
 						type="submit"
 						disabled={isSubmitting || orderProducts.length === 0}
@@ -722,9 +726,9 @@ function ProductSearchDialog({
 	};
 
 	return (
-		<div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-			<Card className="w-full max-w-2xl max-h-[80vh] flex flex-col">
-				<CardHeader className="pb-3 border-b">
+		<div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4">
+			<Card className="w-full max-w-2xl max-h-[85vh] sm:max-h-[80vh] flex flex-col">
+				<CardHeader className="pb-2 border-b">
 					<div className="flex items-center justify-between">
 						<CardTitle className="text-base flex items-center gap-2">
 							<Search className="h-4 w-4" />
@@ -736,7 +740,7 @@ function ProductSearchDialog({
 					</div>
 				</CardHeader>
 
-				<CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
+				<CardContent className="flex-1 overflow-y-auto p-3 space-y-3">
 					{/* Search Input */}
 					<div className="relative">
 						<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -752,7 +756,7 @@ function ProductSearchDialog({
 					{/* Product List */}
 					<div className="space-y-2">
 						<Label>Select Product</Label>
-						<div className="border rounded-lg divide-y max-h-[200px] overflow-y-auto">
+						<div className="border rounded-lg divide-y max-h-[50vh] overflow-y-auto">
 							{products.length === 0 ? (
 								<div className="p-4 text-center text-muted-foreground">
 									No products found
@@ -762,7 +766,7 @@ function ProductSearchDialog({
 									<div
 										key={product._id}
 										className={cn(
-											"p-3 cursor-pointer hover:bg-accent transition-colors flex items-center gap-2",
+											"p-3 cursor-pointer hover:bg-accent transition-colors flex gap-2",
 											selectedProduct?._id === product._id && "bg-accent"
 										)}
 										onClick={() => {
@@ -781,7 +785,7 @@ function ProductSearchDialog({
 										)}
 										<div className="flex-1 min-w-0">
 											<h4 className="font-medium text-sm truncate">{product.title}</h4>
-											<div className="flex items-center gap-2 mt-1">
+											<div className="flex flex-wrap items-center gap-2 mt-1">
 												<span className="text-sm font-medium text-primary">
 													৳{product.salePrice || product.price}
 												</span>
@@ -796,7 +800,7 @@ function ProductSearchDialog({
 											</div>
 										</div>
 										{selectedProduct?._id === product._id && (
-											<Badge variant="default" className="text-xs">
+											<Badge variant="default" className="text-xs flex-shrink-0">
 												Selected
 											</Badge>
 										)}
@@ -896,7 +900,7 @@ function ProductSearchDialog({
 					)}
 				</CardContent>
 
-				<div className="p-4 border-t flex gap-2">
+				<div className="p-3 border-t flex gap-2">
 					<Button variant="outline" onClick={onClose} className="flex-1">
 						Cancel
 					</Button>

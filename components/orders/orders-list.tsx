@@ -109,59 +109,60 @@ export function OrdersList() {
 		{
 			key: 'customerName',
 			header: 'Customer',
+			render: (value: unknown, row: OrderType) => (
+				<div>
+					<div className="font-medium">{String(value)}</div>
+					{row.customerMobile && (
+						<div className="text-xs text-muted-foreground">{row.customerMobile}</div>
+					)}
+				</div>
+			),
 		},
-		{
-			key: 'customerMobile',
-			header: 'Contact',
-		},
-		{
-			key: 'customerDistrict',
-			header: 'District',
-			render: (value: unknown) => (<span>{String(value) || 'N/A'}</span>),
-		},
+		// {
+		// 	key: 'customerDistrict',
+		// 	header: 'District',
+		// 	render: (value: unknown) => (<span>{String(value) || 'N/A'}</span>),
+		// },
 		{
 			key: 'total',
 			header: 'Amount',
-			render: (value: unknown) => (
-				<span className="font-semibold">৳{Number(value).toFixed(2)}</span>
-			),
-		},
-		{
-			key: 'paid',
-			header: 'Paid',
-			render: (value: unknown) => (
-				<span className="text-green-600">৳{Number(value).toFixed(2)}</span>
-			),
-		},
-		{
-			key: 'due',
-			header: 'Due',
-			render: (value: unknown) => (
-				<span className="text-red-600">৳{Number(value).toFixed(2)}</span>
+			render: (value: unknown, row: OrderType) => (
+				<div>
+					<div className="font-semibold">৳{Number(value).toFixed(2)}</div>
+					{row.due > 0 && (
+						<div className="text-xs text-red-600">Due: ৳{row.due.toFixed(2)}</div>
+					)}
+				</div>
 			),
 		},
 		{
 			key: 'status',
 			header: 'Status',
 			render: (value: unknown, row: OrderType) => (
-				<Badge variant={getStatusBadgeVariant(row.status)}>
-					{String(value).charAt(0).toUpperCase() + String(value).slice(1)}
-				</Badge>
-			),
-		},
-		{
-			key: 'paymentStatus',
-			header: 'Payment',
-			render: (value: unknown, row: OrderType) => (
-				<Badge variant={getPaymentStatusBadgeVariant(row.paymentStatus)}>
-					{String(value).charAt(0).toUpperCase() + String(value).slice(1)}
-				</Badge>
+				<div className="space-y-1">
+					<Badge variant={getStatusBadgeVariant(row.status)}>
+						{String(value).charAt(0).toUpperCase() + String(value).slice(1)}
+					</Badge>
+					<div>
+						<Badge variant={getPaymentStatusBadgeVariant(row.paymentStatus)} className="text-xs">
+							{String(row.paymentStatus).charAt(0).toUpperCase() + String(row.paymentStatus).slice(1)}
+						</Badge>
+					</div>
+				</div>
 			),
 		},
 		{
 			key: 'createdAt',
 			header: 'Date',
-			render: (value: unknown) => (<span>{new Date(String(value)).toLocaleDateString()}</span>),
+			render: (value: unknown) => {
+				const date = new Date(String(value));
+				return (
+					<div>
+						<div className="text-sm">{date.toLocaleDateString()}</div>
+						<div className="text-xs text-muted-foreground">{date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+					</div>
+				);
+			},
 		},
 	];
 
@@ -248,7 +249,7 @@ export function OrdersList() {
 
 			{/* Edit Sheet */}
 			<Sheet open={editSheetOpen} onOpenChange={setEditSheetOpen}>
-				<SheetContent className="sm:max-w-[600px] w-full">
+				<SheetContent className="sm:max-w-4xl w-full">
 					<div className="h-full">
 						{editingOrder && (
 							<OrderEditForm order={editingOrder} onSuccess={handleEditSuccess} />
