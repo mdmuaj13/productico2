@@ -53,6 +53,7 @@ interface Column<T = unknown> {
 interface SimpleTableProps<T = unknown> {
   data: T[]
   columns: Column<T>[]
+  mobileColumns?: Column<T>[]
   actions?: Action<T>[]
   showPagination?: boolean
   pageSize?: number
@@ -61,6 +62,7 @@ interface SimpleTableProps<T = unknown> {
 export function SimpleTable<T = unknown>({
   data,
   columns,
+  mobileColumns,
   actions,
   showPagination = true,
   pageSize = 10,

@@ -159,6 +159,22 @@ export function ProductsList() {
 		},
 	];
 
+	const mobileColumns = [
+		{
+			key: 'title',
+			header: 'Product',
+			render: (value: unknown) => {
+				const variants = value as Product['variants'];
+				return variants && variants.length > 0 ? `${variants.length}` : '0';
+			},
+		},
+		{
+			key: 'price',
+			header: 'Price',
+			render: (value: unknown) => `$${value}`,
+		}
+	];
+
 	const actions = [
 		{
 			label: 'View',
@@ -224,6 +240,7 @@ export function ProductsList() {
 					<SimpleTable
 						data={products}
 						columns={columns}
+						mobileColumns={mobileColumns}
 						actions={actions}
 						showPagination={false}
 					/>
