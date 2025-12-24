@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Plus } from 'lucide-react';
+import { Eye, Pencil, Plus, Trash } from 'lucide-react';
 import { useProducts, deleteProduct } from '@/hooks/products';
 import { ProductForm } from './product-form';
 import { ProductEditForm } from './edit-form';
@@ -163,10 +163,6 @@ export function ProductsList() {
 		{
 			key: 'title',
 			header: 'Product',
-			render: (value: unknown) => {
-				const variants = value as Product['variants'];
-				return variants && variants.length > 0 ? `${variants.length}` : '0';
-			},
 		},
 		{
 			key: 'price',
@@ -177,19 +173,19 @@ export function ProductsList() {
 
 	const actions = [
 		{
-			label: 'View',
+			label: <Eye/>,
 			onClick: (product: Product) => {
 				handleViewProduct(product);
 			},
 			variant: 'secondary' as const,
 		},
 		{
-			label: 'Edit',
+			label: <Pencil/>,
 			onClick: (product: Product) => handleEditProduct(product),
 			variant: 'outline' as const,
 		},
 		{
-			label: 'Delete',
+			label: <Trash/>,
 			onClick: (product: Product) => handleDeleteClick(product),
 			variant: 'destructive' as const,
 		},
