@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Plus } from 'lucide-react';
+import { Eye, Pencil, Plus, Trash } from 'lucide-react';
 import { useVendors, deleteVendor } from '@/hooks/vendors';
 import { VendorForm } from './create';
 import { VendorEditForm } from './edit-form';
@@ -148,19 +148,19 @@ export function VendorsList() {
 
 	const actions = [
 		{
-			label: 'View',
+			label: <Eye/>,
 			onClick: (vendor: Vendor) => {
 				handleViewVendor(vendor);
 			},
 			variant: 'secondary' as const,
 		},
 		{
-			label: 'Edit',
+			label: <Pencil/>,
 			onClick: (vendor: Vendor) => handleEditVendor(vendor),
 			variant: 'outline' as const,
 		},
 		{
-			label: 'Delete',
+			label: <Trash/>,
 			onClick: (vendor: Vendor) => handleDeleteClick(vendor),
 			variant: 'destructive' as const,
 		},

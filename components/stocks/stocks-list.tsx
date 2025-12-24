@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Plus, Minus } from 'lucide-react';
+import { Plus, Minus, Pencil, Trash } from 'lucide-react';
 import { useStocks, deleteStock } from '@/hooks/stocks';
 import { StockForm } from './stock-form';
 import { StockEditForm } from './stock-edit-form';
@@ -158,12 +158,12 @@ export function StocksList() {
 
 	const actions = [
 		{
-			label: 'Edit',
+			label: <Pencil/>,
 			onClick: (stock: Stock) => handleEditStock(stock),
 			variant: 'outline' as const,
 		},
 		{
-			label: 'Delete',
+			label: <Trash/>,
 			onClick: (stock: Stock) => handleDeleteClick(stock),
 			variant: 'destructive' as const,
 		},

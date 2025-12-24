@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Plus } from 'lucide-react';
+import { Eye, Pencil, Plus, Trash } from 'lucide-react';
 import { useWarehouses } from '@/hooks/warehouses';
 import { WarehouseForm } from './create';
 import { WarehouseEditForm } from './edit-form';
@@ -101,17 +101,17 @@ export function WarehousesList() {
 
 	const actions = [
 		{
-			label: 'View',
+			label: <Eye/>,
 			onClick: (warehouse: Warehouse) => handleViewWarehouse(warehouse),
 			variant: 'outline' as const,
 		},
 		{
-			label: 'Edit',
+			label: <Pencil/>,
 			onClick: (warehouse: Warehouse) => handleEditWarehouse(warehouse),
 			variant: 'outline' as const,
 		},
 		{
-			label: 'Delete',
+			label: <Trash/>,
 			onClick: (warehouse: Warehouse) => handleViewWarehouse(warehouse),
 			variant: 'destructive' as const,
 		},
