@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Plus } from 'lucide-react';
+import { Eye, Pencil, Plus, Trash } from 'lucide-react';
 import { useCategories, deleteCategory } from '@/hooks/categories';
 import { CategoryForm } from './create';
 import { CategoryEditForm } from './edit-form';
@@ -160,21 +160,44 @@ export function CategoriesList() {
 		},
 	];
 
+	const mobileColumns = [
+		{
+			key: 'title',
+			header: 'Title',
+		},
+		{
+			key: 'serialNo',
+			header: 'Serial No',
+			render: (value: unknown) => (
+				<span className="font-mono">{value ? String(value) : '0'}</span>
+			),
+		},
+		{
+			key: 'isActive',
+			header: 'Status',
+			render: (value: unknown) => (
+				<Badge variant={value ? 'default' : 'secondary'}>
+					{value ? 'Active' : 'Inactive'}
+				</Badge>
+			),
+		},
+	];
+
 	const actions = [
 		{
-			label: 'View',
+			label: <Eye/>,
 			onClick: (category: Category) => {
 				handleViewCategory(category);
 			},
 			variant: 'secondary' as const,
 		},
 		{
-			label: 'Edit',
+			label: <Pencil/>,
 			onClick: (category: Category) => handleEditCategory(category),
 			variant: 'outline' as const,
 		},
 		{
-			label: 'Delete',
+			label: <Trash/>,
 			onClick: (category: Category) => handleDeleteClick(category),
 			variant: 'destructive' as const,
 		},
@@ -227,6 +250,7 @@ export function CategoriesList() {
 					<SimpleTable
 						data={categories}
 						columns={columns}
+						mobileColumns={mobileColumns}
 						actions={actions}
 						showPagination={false}
 					/>

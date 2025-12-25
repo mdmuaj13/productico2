@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Plus, Search, Eye } from 'lucide-react';
+import { Plus, Search, Eye, Pencil, Trash } from 'lucide-react';
 import { usePurchaseOrders, deletePurchaseOrder } from '@/hooks/purchase-orders';
 import { PurchaseOrderForm } from './create';
 import { PurchaseOrderEditForm } from './edit-form';
@@ -189,18 +189,18 @@ export function PurchaseOrdersList() {
 
 	const actions = [
 		{
-			label: 'View',
+			label: <Eye/>,
 			onClick: (purchaseOrder: PurchaseOrder) => handleViewPurchaseOrder(purchaseOrder),
 			variant: 'outline' as const,
 			icon: Eye,
 		},
 		{
-			label: 'Edit',
+			label: <Pencil/>,
 			onClick: (purchaseOrder: PurchaseOrder) => handleEditPurchaseOrder(purchaseOrder),
 			variant: 'outline' as const,
 		},
 		{
-			label: 'Delete',
+			label: <Trash/>,
 			onClick: (purchaseOrder: PurchaseOrder) => handleDeleteClick(purchaseOrder),
 			variant: 'destructive' as const,
 		},

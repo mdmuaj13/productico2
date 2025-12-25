@@ -1,296 +1,358 @@
-'use client';
+"use client"
 
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { Order } from '@/hooks/orders';
-import { SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Edit, Package, User, MapPin, Phone, Mail } from 'lucide-react';
+import * as React from "react"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Separator } from "@/components/ui/separator"
+import { SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import { Order } from "@/hooks/orders"
+import {
+  Edit,
+  Package,
+  User,
+  MapPin,
+  Phone,
+  Mail,
+  CreditCard,
+  Calendar,
+  Hash,
+  StickyNote,
+  CircleDot,
+} from "lucide-react"
 
 interface OrderViewProps {
-	order: Order;
-	onEdit: () => void;
-	onSuccess: () => void;
+  order: Order
+  onEdit: () => void
+  onSuccess: () => void
+}
+
+function cn(...classes: Array<string | false | null | undefined>) {
+  return classes.filter(Boolean).join(" ")
+}
+
+function formatMoney(amount: number) {
+  // You can swap to Intl.NumberFormat if you want commas
+  return `৳${amount.toFixed(2)}`
+}
+
+function formatDateTime(input: string | number | Date) {
+  try {
+    return new Date(input).toLocaleString()
+  } catch {
+    return String(input)
+  }
+}
+
+function statusLabel(s: string) {
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : s
+}
+
+function statusBadgeVariant(status: Order["status"]) {
+  // Keep variants within shadcn badge variants you already use: default/secondary/destructive
+  switch (status) {
+    case "cancelled":
+      return "destructive"
+    case "pending":
+      return "secondary"
+    case "processing":
+    case "confirmed":
+    case "shipped":
+    case "delivered":
+    default:
+      return "default"
+  }
+}
+
+function paymentBadgeVariant(status: Order["paymentStatus"]) {
+  switch (status) {
+    case "unpaid":
+      return "destructive"
+    case "partial":
+      return "secondary"
+    case "paid":
+    default:
+      return "default"
+  }
+}
+
+function KeyValue({
+  icon,
+  label,
+  value,
+  className,
+  mono,
+}: {
+  icon?: React.ReactNode
+  label: string
+  value: React.ReactNode
+  className?: string
+  mono?: boolean
+}) {
+  return (
+    <div className={cn("flex items-start gap-3 rounded-xl border bg-card p-3", className)}>
+      <div className="mt-0.5 shrink-0 text-muted-foreground">{icon}</div>
+      <div className="min-w-0 flex-1">
+        <p className="text-xs text-muted-foreground">{label}</p>
+        <div className={cn("text-sm font-medium break-words", mono && "font-mono")}>{value}</div>
+      </div>
+    </div>
+  )
 }
 
 export function OrderView({ order, onEdit }: OrderViewProps) {
-	const getStatusBadgeVariant = (status: Order['status']) => {
-		switch (status) {
-			case 'pending':
-				return 'secondary';
-			case 'processing':
-				return 'default';
-			case 'confirmed':
-				return 'default';
-			case 'shipped':
-				return 'default';
-			case 'delivered':
-				return 'default';
-			case 'cancelled':
-				return 'destructive';
-			default:
-				return 'secondary';
-		}
-	};
+  const dueIsPositive = order.due > 0
 
-	const getPaymentStatusBadgeVariant = (
-		status: Order['paymentStatus']
-	) => {
-		switch (status) {
-			case 'unpaid':
-				return 'destructive';
-			case 'partial':
-				return 'secondary';
-			case 'paid':
-				return 'default';
-			default:
-				return 'secondary';
-		}
-	};
+  return (
+    <div className="h-full overflow-y-auto pb-6 px-2 md:px-6">
+      {/* Header */}
+      <SheetHeader className="mb-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <SheetTitle className="text-2xl">Order</SheetTitle>
 
-	return (
-		<div className="h-full overflow-y-auto pb-6">
-			<SheetHeader className="mb-6">
-				<div className="flex items-start justify-between">
-					<div>
-						<SheetTitle className="text-2xl">Order Details</SheetTitle>
-						<p className="text-sm text-muted-foreground mt-1 font-mono">
-							{order.code}
-						</p>
-					</div>
-					<Button onClick={onEdit} size="sm" variant="outline">
-						<Edit className="h-4 w-4 mr-2" />
-						Edit
-					</Button>
-				</div>
-			</SheetHeader>
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              <Badge variant="secondary" className="font-mono">
+                {order.code}
+              </Badge>
 
-			<div className="space-y-4">
-				{/* Status Badges */}
-				<Card className="border-l-4 border-l-primary">
-					<CardContent className="pt-4">
-						<div className="flex items-center gap-4">
-							<div>
-								<p className="text-xs text-muted-foreground mb-1">
-									Order Status
-								</p>
-								<Badge variant={getStatusBadgeVariant(order.status)} className="text-sm">
-									{order.status.charAt(0).toUpperCase() +
-										order.status.slice(1)}
-								</Badge>
-							</div>
-							<Separator orientation="vertical" className="h-10" />
-							<div>
-								<p className="text-xs text-muted-foreground mb-1">
-									Payment Status
-								</p>
-								<Badge
-									variant={getPaymentStatusBadgeVariant(
-										order.paymentStatus
-									)}
-									className="text-sm"
-								>
-									{order.paymentStatus.charAt(0).toUpperCase() +
-										order.paymentStatus.slice(1)}
-								</Badge>
-							</div>
-						</div>
-					</CardContent>
-				</Card>
+              <Badge variant={statusBadgeVariant(order.status)} className="gap-1">
+                <CircleDot className="h-3.5 w-3.5" />
+                {statusLabel(order.status)}
+              </Badge>
 
-				{/* Customer Information */}
-				<Card className="border-l-4 border-l-blue-500">
-					<CardHeader className="pb-3">
-						<CardTitle className="text-base flex items-center gap-2">
-							<User className="h-4 w-4" />
-							Customer Information
-						</CardTitle>
-					</CardHeader>
-					<CardContent className="space-y-3">
-						<div className="space-y-2">
-							<div className="flex items-start gap-2">
-								<User className="h-4 w-4 text-muted-foreground mt-0.5" />
-								<div className="flex-1">
-									<p className="text-xs text-muted-foreground">Name</p>
-									<p className="text-sm font-medium">{order.customerName}</p>
-								</div>
-							</div>
-							<div className="flex items-start gap-2">
-								<Phone className="h-4 w-4 text-muted-foreground mt-0.5" />
-								<div className="flex-1">
-									<p className="text-xs text-muted-foreground">Contact</p>
-									<p className="text-sm font-medium">{order.customerMobile}</p>
-								</div>
-							</div>
-							{order.customerEmail && (
-								<div className="flex items-start gap-2">
-									<Mail className="h-4 w-4 text-muted-foreground mt-0.5" />
-									<div className="flex-1">
-										<p className="text-xs text-muted-foreground">Email</p>
-										<p className="text-sm font-medium">{order.customerEmail}</p>
-									</div>
-								</div>
-							)}
-							<div className="flex items-start gap-2">
-								<MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-								<div className="flex-1">
-									<p className="text-xs text-muted-foreground">Address</p>
-									<p className="text-sm font-medium">{order.customerAddress}</p>
-									{order.customerDistrict && (
-										<p className="text-xs text-muted-foreground mt-1">
-											{order.customerDistrict}
-										</p>
-									)}
-								</div>
-							</div>
-						</div>
-					</CardContent>
-				</Card>
+              <Badge variant={paymentBadgeVariant(order.paymentStatus)}>
+                {statusLabel(order.paymentStatus)}
+              </Badge>
+            </div>
+          </div>
 
-				{/* Products */}
-				<Card className="border-l-4 border-l-green-500">
-					<CardHeader className="pb-3">
-						<CardTitle className="text-base flex items-center gap-2">
-							<Package className="h-4 w-4" />
-							Products ({order.products.length})
-						</CardTitle>
-					</CardHeader>
-					<CardContent>
-						<div className="space-y-3">
-							{order.products.map((product, index) => (
-								<div
-									key={index}
-									className={`pb-3 ${
-										index !== order.products.length - 1 ? 'border-b' : ''
-									}`}
-								>
-									<div className="flex justify-between items-start mb-2">
-										<div className="flex-1">
-											<p className="font-medium text-sm">{product.title}</p>
-											{product.variantName && (
-												<Badge variant="secondary" className="text-xs mt-1">
-													{product.variantName}
-												</Badge>
-											)}
-										</div>
-										<p className="font-semibold text-sm">৳{product.lineTotal.toFixed(2)}</p>
-									</div>
-									<div className="grid grid-cols-3 gap-2 text-xs">
-										<div>
-											<p className="text-muted-foreground">Price</p>
-											<p className="font-medium">৳{product.price.toFixed(2)}</p>
-										</div>
-										<div>
-											<p className="text-muted-foreground">Quantity</p>
-											<p className="font-medium">{product.quantity}</p>
-										</div>
-										<div>
-											<p className="text-muted-foreground">Line Total</p>
-											<p className="font-medium">৳{product.lineTotal.toFixed(2)}</p>
-										</div>
-									</div>
-								</div>
-							))}
-						</div>
-					</CardContent>
-				</Card>
+          <Button onClick={onEdit} size="sm" variant="outline" className="shrink-0">
+            <Edit className="h-4 w-4 mr-2" />
+            Edit
+          </Button>
+        </div>
+      </SheetHeader>
 
-				{/* Financial Summary */}
-				<Card className="border-l-4 border-l-amber-500">
-					<CardHeader className="pb-3">
-						<CardTitle className="text-base">Financial Summary</CardTitle>
-					</CardHeader>
-					<CardContent>
-						<div className="space-y-2">
-							<div className="flex justify-between text-sm">
-								<span className="text-muted-foreground">Subtotal</span>
-								<span>৳{order.subTotal.toFixed(2)}</span>
-							</div>
+      <div className="space-y-2">
+        {/* Customer */}
+        <Card className="overflow-hidden">
+          <CardHeader className="">
+            <CardTitle className="text-base flex items-center gap-2">
+              <User className="h-4 w-4" />
+              Customer
+            </CardTitle>
+          </CardHeader>
 
-							{order.discount > 0 && (
-								<div className="flex justify-between text-sm">
-									<span className="text-muted-foreground">Discount</span>
-									<span className="text-green-600">
-										-৳{order.discount.toFixed(2)}
-									</span>
-								</div>
-							)}
+          <CardContent className="grid gap-3 sm:grid-cols-2">
+            <KeyValue
+              icon={<User className="h-4 w-4" />}
+              label="Name"
+              value={order.customerName}
+            />
+            <KeyValue
+              icon={<Phone className="h-4 w-4" />}
+              label="Contact"
+              value={order.customerMobile}
+              mono
+            />
+            {order.customerEmail ? (
+              <KeyValue
+                icon={<Mail className="h-4 w-4" />}
+                label="Email"
+                value={order.customerEmail}
+              />
+            ) : null}
+            <KeyValue
+              icon={<MapPin className="h-4 w-4" />}
+              label="Address"
+              value={
+                <div className="space-y-1">
+                  <div>{order.customerAddress}</div>
+                  {order.customerDistrict ? (
+                    <div className="text-xs text-muted-foreground">{order.customerDistrict}</div>
+                  ) : null}
+                </div>
+              }
+              className={cn("sm:col-span-2")}
+            />
+          </CardContent>
+        </Card>
 
-							{order.deliveryCost > 0 && (
-								<div className="flex justify-between text-sm">
-									<span className="text-muted-foreground">Delivery Cost</span>
-									<span>+৳{order.deliveryCost.toFixed(2)}</span>
-								</div>
-							)}
+        {/* Products */}
+        <Card className="overflow-hidden">
+          <CardHeader className="">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Package className="h-4 w-4" />
+              Products
+              <Badge variant="secondary" className="ml-2">
+                {order.products.length}
+              </Badge>
+            </CardTitle>
+          </CardHeader>
 
-							{order.tax > 0 && (
-								<div className="flex justify-between text-sm">
-									<span className="text-muted-foreground">Tax</span>
-									<span>+৳{order.tax.toFixed(2)}</span>
-								</div>
-							)}
+          <CardContent className="space-y-3">
+            {order.products.map((product, index) => (
+              <div
+                key={index}
+                className={cn(
+                  "rounded-xl border bg-card p-3",
+                  index !== order.products.length - 1 && "after:content-['']"
+                )}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold leading-tight wrap-break-word">
+                      {product.title}
+                    </p>
+                    {product.variantName ? (
+                      <Badge variant="secondary" className="mt-2 text-xs">
+                        {product.variantName}
+                      </Badge>
+                    ) : null}
+                  </div>
 
-							<Separator />
+                  <div className="text-right shrink-0">
+                    <p className="text-xs text-muted-foreground">Line total</p>
+                    <p className="text-sm font-semibold">{formatMoney(product.lineTotal)}</p>
+                  </div>
+                </div>
 
-							<div className="flex justify-between font-semibold bg-accent/50 px-3 py-2 rounded-md">
-								<span>Total Amount</span>
-								<span className="text-primary">৳{order.total.toFixed(2)}</span>
-							</div>
+                <Separator className="my-2" />
 
-							<Separator />
+                <div className="grid grid-cols-3 gap-2 text-xs">
+                  <div className="rounded-lg bg-accent/30 px-2 py-1">
+                    <p className="text-muted-foreground">Price</p>
+                    <p className="text-xs font-medium">{formatMoney(product.price)}</p>
+                  </div>
+                  <div className="rounded-lg bg-accent/30 px-2 py-1">
+                    <p className="text-muted-foreground">Qty</p>
+                    <p className="text-xs font-medium">{product.quantity}</p>
+                  </div>
+                  <div className="rounded-lg bg-accent/30 px-2 py-1">
+                    <p className="text-muted-foreground">Total</p>
+                    <p className="text-xs font-medium">{formatMoney(product.lineTotal)}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
 
-							<div className="flex justify-between text-sm">
-								<span className="text-muted-foreground">Paid Amount</span>
-								<span className="text-green-600 font-semibold">
-									৳{order.paid.toFixed(2)}
-								</span>
-							</div>
+        {/* Summary */}
+        <Card className="overflow-hidden">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <CreditCard className="h-4 w-4" />
+              Summary
+            </CardTitle>
+          </CardHeader>
 
-							<div className="flex justify-between text-sm">
-								<span className="font-medium">Due Amount</span>
-								<span className={order.due > 0 ? 'text-red-600 font-semibold' : 'text-green-600 font-semibold'}>
-									৳{order.due.toFixed(2)}
-								</span>
-							</div>
-						</div>
-					</CardContent>
-				</Card>
+          <CardContent className="space-y-3">
+            <div className="grid gap-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Subtotal</span>
+                <span className="font-medium">{formatMoney(order.subTotal)}</span>
+              </div>
 
-				{/* Order Information */}
-				<Card>
-					<CardHeader className="pb-3">
-						<CardTitle className="text-base">Order Information</CardTitle>
-					</CardHeader>
-					<CardContent className="space-y-3">
-						<div className="grid grid-cols-2 gap-3 text-sm">
-							<div>
-								<p className="text-xs text-muted-foreground">Payment Type</p>
-								<p className="font-medium capitalize">{order.paymentType}</p>
-							</div>
-							<div>
-								<p className="text-xs text-muted-foreground">Created At</p>
-								<p className="font-medium">
-									{new Date(order.createdAt).toLocaleString()}
-								</p>
-							</div>
-							{order.trackingCode && (
-								<div className="col-span-2">
-									<p className="text-xs text-muted-foreground">Tracking Code</p>
-									<p className="font-medium font-mono">{order.trackingCode}</p>
-								</div>
-							)}
-						</div>
+              {order.discount > 0 ? (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Discount</span>
+                  <span className="font-medium text-emerald-600">
+                    -{formatMoney(order.discount)}
+                  </span>
+                </div>
+              ) : null}
 
-						{order.remark && (
-							<div className="pt-2 border-t">
-								<p className="text-xs text-muted-foreground mb-1">Remark</p>
-								<p className="text-sm bg-accent/50 p-2 rounded-md">{order.remark}</p>
-							</div>
-						)}
-					</CardContent>
-				</Card>
-			</div>
-		</div>
-	);
+              {order.deliveryCost > 0 ? (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Delivery</span>
+                  <span className="font-medium">+{formatMoney(order.deliveryCost)}</span>
+                </div>
+              ) : null}
+
+              {order.tax > 0 ? (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Tax</span>
+                  <span className="font-medium">+{formatMoney(order.tax)}</span>
+                </div>
+              ) : null}
+
+              <Separator />
+
+              <div className="rounded-xl border bg-accent/30 p-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold">Total</span>
+                  <span className="text-base font-bold text-primary">
+                    {formatMoney(order.total)}
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div className="rounded-xl border bg-card p-3">
+                  <p className="text-xs text-muted-foreground">Paid</p>
+                  <p className="text-sm font-semibold text-emerald-600">{formatMoney(order.paid)}</p>
+                </div>
+
+                <div className="rounded-xl border bg-card p-3">
+                  <p className="text-xs text-muted-foreground">Due</p>
+                  <p
+                    className={cn(
+                      "text-sm font-semibold",
+                      dueIsPositive ? "text-rose-600" : "text-emerald-600"
+                    )}
+                  >
+                    {formatMoney(order.due)}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Meta */}
+        <Card className="overflow-hidden">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Order Info</CardTitle>
+          </CardHeader>
+
+          <CardContent className="grid gap-3 sm:grid-cols-2">
+            <KeyValue
+              icon={<CreditCard className="h-4 w-4" />}
+              label="Payment type"
+              value={<span className="capitalize">{order.paymentType}</span>}
+            />
+            <KeyValue
+              icon={<Calendar className="h-4 w-4" />}
+              label="Created"
+              value={formatDateTime(order.createdAt)}
+            />
+
+            {order.trackingCode ? (
+              <KeyValue
+                icon={<Hash className="h-4 w-4" />}
+                label="Tracking code"
+                value={order.trackingCode}
+                mono
+                className="sm:col-span-2"
+              />
+            ) : null}
+
+            {order.remark ? (
+              <div className="sm:col-span-2">
+                <div className="flex items-center gap-2 text-sm font-semibold mb-2">
+                  <StickyNote className="h-4 w-4" />
+                  Remark
+                </div>
+                <div className="rounded-xl border bg-accent/30 p-3 text-sm leading-relaxed">
+                  {order.remark}
+                </div>
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  )
 }

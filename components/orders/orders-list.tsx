@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Plus } from 'lucide-react';
+import { Eye, Pencil, Plus } from 'lucide-react';
 import { OrderForm } from './create';
 import { OrderView } from './view';
 import { OrderEditForm } from './edit-form';
@@ -168,12 +168,12 @@ export function OrdersList() {
 
 	const actions = [
 		{
-			label: 'View',
+			label: <Eye/>,
 			onClick: (order: OrderType) => handleViewOrder(order),
 			variant: 'secondary' as const,
 		},
 		{
-			label: 'Edit',
+			label: <Pencil/>,
 			onClick: (order: OrderType) => handleEditOrder(order),
 			variant: 'outline' as const,
 		},

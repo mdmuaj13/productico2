@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Plus, Search } from 'lucide-react';
+import { ArrowLeft, Pencil, Plus, Search, Trash } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import ExpenseEntryForm from './expense-entry-form';
@@ -146,12 +146,12 @@ export default function ExpenseBookDetails({ bookId }: ExpenseBookDetailsProps) 
 
   const actions = [
     {
-      label: 'Edit',
+      label: <Pencil/>,
       onClick: (entry: IExpenseEntry) => handleEdit(entry),
       variant: 'outline' as const,
     },
     {
-      label: 'Delete',
+      label: <Trash/>,
       onClick: (entry: IExpenseEntry) => handleDeleteClick(entry),
       variant: 'destructive' as const,
     },

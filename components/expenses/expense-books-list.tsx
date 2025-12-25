@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Plus, Search, Eye } from 'lucide-react';
+import { Plus, Search, Eye, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import ExpenseBookForm from './expense-book-form';
@@ -128,13 +128,13 @@ export default function ExpenseBooksList() {
 
   const actions = [
     {
-      label: 'Details',
+      label: <Eye/>,
       onClick: (book: IExpenseBook) => handleViewDetails(book),
       variant: 'outline' as const,
       icon: Eye,
     },
     {
-      label: 'Edit',
+      label: <Pencil/>,
       onClick: (book: IExpenseBook) => handleEdit(book),
       variant: 'outline' as const,
     },

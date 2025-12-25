@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Plus } from 'lucide-react';
+import { Eye, Pencil, Plus, Trash } from 'lucide-react';
 import { useCustomers, deleteCustomer } from '@/hooks/customers';
 import { CustomerForm } from './create';
 import { CustomerEditForm } from './edit-form';
@@ -163,19 +163,19 @@ export function CustomersList() {
 
 	const actions = [
 		{
-			label: 'View',
+			label: <Eye/>,
 			onClick: (customer: Customer) => {
 				handleViewCustomer(customer);
 			},
 			variant: 'secondary' as const,
 		},
 		{
-			label: 'Edit',
+			label: <Pencil/>,
 			onClick: (customer: Customer) => handleEditCustomer(customer),
 			variant: 'outline' as const,
 		},
 		{
-			label: 'Delete',
+			label: <Trash/>,
 			onClick: (customer: Customer) => handleDeleteClick(customer),
 			variant: 'destructive' as const,
 		},

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Plus } from 'lucide-react';
+import { Eye, Pencil, Plus, Trash } from 'lucide-react';
 import { useProducts, deleteProduct } from '@/hooks/products';
 import { ProductForm } from './product-form';
 import { ProductEditForm } from './edit-form';
@@ -159,21 +159,33 @@ export function ProductsList() {
 		},
 	];
 
+	const mobileColumns = [
+		{
+			key: 'title',
+			header: 'Product',
+		},
+		{
+			key: 'price',
+			header: 'Price',
+			render: (value: unknown) => `$${value}`,
+		}
+	];
+
 	const actions = [
 		{
-			label: 'View',
+			label: <Eye/>,
 			onClick: (product: Product) => {
 				handleViewProduct(product);
 			},
 			variant: 'secondary' as const,
 		},
 		{
-			label: 'Edit',
+			label: <Pencil/>,
 			onClick: (product: Product) => handleEditProduct(product),
 			variant: 'outline' as const,
 		},
 		{
-			label: 'Delete',
+			label: <Trash/>,
 			onClick: (product: Product) => handleDeleteClick(product),
 			variant: 'destructive' as const,
 		},
@@ -224,6 +236,7 @@ export function ProductsList() {
 					<SimpleTable
 						data={products}
 						columns={columns}
+						mobileColumns={mobileColumns}
 						actions={actions}
 						showPagination={false}
 					/>
