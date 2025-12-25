@@ -104,7 +104,7 @@ export function OrderEditForm({ order, onSuccess }: OrderEditFormProps) {
         title: p.title ?? "",
         slug: p.slug ?? "", // ✅ FIX: never undefined
         thumbnail: p.thumbnail,
-        price: ((p as any).basePrice ?? p.price ?? 0) as number, // ✅ ensure number
+        price: (p.price ?? 0) as number, // ✅ ensure number
         salePrice: p.variantSalePrice || undefined,
         quantity: p.quantity ?? 1,
         lineTotal: p.lineTotal ?? 0,
@@ -139,8 +139,8 @@ export function OrderEditForm({ order, onSuccess }: OrderEditFormProps) {
       city: order.customerDistrict || "",
       order_code: order.code,
       order_date: order.createdAt,
-      order_status: order.status as any,
-      order_payment_status: order.paymentStatus as any,
+      order_status: order.status as OrderFormData["order_status"],
+      order_payment_status: order.paymentStatus as OrderFormData["order_payment_status"],
       discount_code: "",
       discount_amount: order.discount,
       delivery_cost: order.deliveryCost,
@@ -274,14 +274,9 @@ export function OrderEditForm({ order, onSuccess }: OrderEditFormProps) {
       await updateOrder(order._id, apiData)
       toast.success("Order updated successfully")
       onSuccess()
-    } catch (error) {
+    } catch (error: unknown) {
       const errorMessage =
-        error &&
-        typeof error === "object" &&
-        "message" in error &&
-        typeof (error as any).message === "string"
-          ? (error as any).message
-          : "Failed to update order"
+        error instanceof Error ? error.message : "Failed to update order"
       toast.error(errorMessage)
       console.error(error)
     } finally {

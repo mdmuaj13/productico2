@@ -240,9 +240,7 @@ export function OrderForm({ onSuccess }: OrderFormProps) {
       onSuccess();
     } catch (error: unknown) {
       const errorMessage =
-        error && typeof error === 'object' && 'message' in error && typeof (error as any).message === 'string'
-          ? (error as any).message
-          : 'Failed to create order';
+        error instanceof Error ? error.message : 'Failed to create order';
       toast.error(errorMessage);
       console.error(error);
     } finally {
