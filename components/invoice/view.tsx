@@ -1,10 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
@@ -15,15 +15,16 @@ import {
   CircleDot,
   Printer,
   CalendarClock,
-  FileText,
+  Trash2,
 } from "lucide-react";
 
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { Invoice as InvoiceType, InvoiceItem } from "@/hooks/invoice";
 
 interface InvoiceViewProps {
   invoice: InvoiceType;
   onEdit: () => void;
-  onSuccess: () => void;
+  onSuccess: () => void; // ✅ call this after delete so parent can close + refresh
 }
 
 function formatMoney(amount: number) {
@@ -68,8 +69,29 @@ function toDateLabel(input: any) {
   }
 }
 
-export function InvoiceView({ invoice, onEdit }: InvoiceViewProps) {
+async function deleteInvoice(invoiceId: string) {
+  // ✅ adjust endpoint if needed
+  const res = await fetch(`/api/invoice/${invoiceId}`, {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+  });
+
+  const result = await res.json().catch(() => ({}));
+
+  if (!res.ok) {
+    const message =
+      result?.error || result?.message || "Failed to delete invoice. Please try again.";
+    throw new Error(message);
+  }
+
+  return result;
+}
+
+export function InvoiceView({ invoice, onEdit, onSuccess }: InvoiceViewProps) {
   const previewPrintRef = useRef<HTMLDivElement | null>(null);
+
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const dueIsPositive = Number(invoice.due || 0) > 0;
 
@@ -133,6 +155,28 @@ export function InvoiceView({ invoice, onEdit }: InvoiceViewProps) {
     if (root) root.innerHTML = node.outerHTML;
   };
 
+  const handleDeleteConfirm = async () => {
+    const id = String((invoice as any)._id || "");
+    if (!id) {
+      toast.error("Invalid invoice id");
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      await deleteInvoice(id);
+      toast.success("Invoice deleted");
+      setDeleteDialogOpen(false);
+      onSuccess(); // ✅ parent closes sheet + refresh list
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Failed to delete invoice";
+      toast.error(msg);
+      console.error(e);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const invoiceNo = invoice.invoiceNo || "—";
 
   const clientName = invoice.clientName || "—";
@@ -192,7 +236,16 @@ export function InvoiceView({ invoice, onEdit }: InvoiceViewProps) {
               className="shrink-0"
             >
               <Edit className="h-4 w-4 mr-2" />
-              Edit
+            </Button>
+
+            <Button
+              type="button"
+              onClick={() => setDeleteDialogOpen(true)}
+              size="sm"
+              variant="destructive"
+              className="shrink-0"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
             </Button>
 
             <Button
@@ -268,18 +321,6 @@ export function InvoiceView({ invoice, onEdit }: InvoiceViewProps) {
                 <div className="p-3 border-l">
                   <div className="text-xs text-muted-foreground">Due date</div>
                   <div className="mt-1 font-semibold">{dueDate}</div>
-
-                  <div className="text-xs text-muted-foreground mt-2">
-                    Payment status
-                  </div>
-                  <div className="mt-1">
-                    <Badge
-                      variant={paymentBadgeVariant(invoice.paymentStatus)}
-                      className="capitalize"
-                    >
-                      {invoice.paymentStatus || "—"}
-                    </Badge>
-                  </div>
                 </div>
 
                 <div className="col-span-2 p-3 border-t">
@@ -322,12 +363,12 @@ export function InvoiceView({ invoice, onEdit }: InvoiceViewProps) {
                           {Number(it.quantity || 0)}
                         </div>
 
-                        {/* remove two decimals for Rate */}
+                        {/* no decimals for Rate */}
                         <div className="col-span-2 text-right">
                           {Math.round(Number((it as any).price ?? 0))}
                         </div>
 
-                        {/* remove two decimals for Total */}
+                        {/* no decimals for Total */}
                         <div className="col-span-2 text-right font-semibold">
                           {Math.round(Number((it as any).lineTotal ?? 0))}
                         </div>
@@ -426,18 +467,23 @@ export function InvoiceView({ invoice, onEdit }: InvoiceViewProps) {
                   )}
                 </div>
               )}
-
-              {/* Optional footer/meta */}
-              {(invoice as any).deletedAt ? (
-                <div className="mt-6 text-xs text-muted-foreground flex items-center gap-2">
-                  <FileText className="h-3.5 w-3.5" />
-                  Deleted at: {toDateLabel((invoice as any).deletedAt)}
-                </div>
-              ) : null}
             </div>
           </CardContent>
         </Card>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmationDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Invoice"
+        description={`Are you sure you want to delete "${invoiceNo}"? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="destructive"
+        isLoading={isDeleting}
+      />
     </div>
   );
 }
