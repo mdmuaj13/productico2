@@ -21,6 +21,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from '@/components/ui/select';
+import { Badge } from '../ui/badge';
 
 interface PurchaseOrder {
 	_id: string;
@@ -140,6 +141,21 @@ export function PurchaseOrdersList() {
 		}
 	};
 
+	const getStatusBadgeVariant = (status: string) => {
+		switch (status) {
+			case "pending":
+				return "secondary";
+			case "cancelled":
+				return "destructive";
+			case "approved":
+				return "default";
+			case "received":
+				return "destructive";
+			default:
+				return "default";
+		}
+	  };
+
 	const formatPrice = (price: number) => {
 		return new Intl.NumberFormat('en-US', {
 			style: 'currency',
@@ -175,9 +191,9 @@ export function PurchaseOrdersList() {
 			key: 'status',
 			header: 'Status',
 			render: (value: unknown) => (
-				<span className={`px-2 py-1 rounded-full text-xs font-semibold ${getStatusBadgeColor(String(value))}`}>
-					{String(value).charAt(0).toUpperCase() + String(value).slice(1)}
-				</span>
+				<Badge variant={getStatusBadgeVariant(String(value))}>
+				{String(value).charAt(0).toUpperCase() + String(value).slice(1)}
+			  </Badge>
 			),
 		},
 		{

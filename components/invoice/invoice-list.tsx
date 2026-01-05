@@ -388,7 +388,7 @@ export function InvoiceList() {
         </div>
       ) : (
         <>
-          {/* ✅ Mobile: cards */}
+          {/* Mobile: cards */}
           <div className="grid grid-cols-1 gap-3 sm:hidden">
             {invoices.map((inv: InvoiceType) => (
               <div
@@ -446,7 +446,7 @@ export function InvoiceList() {
               </div>
             ))}
 
-            {/* ✅ Mobile pagination */}
+            {/* Mobile pagination */}
             <ServerPagination
               page={meta?.page ?? page}
               totalPages={totalPages}
