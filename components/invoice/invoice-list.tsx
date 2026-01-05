@@ -20,23 +20,33 @@ import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { Input } from "../ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 
-function titleCase(s: any) {
-	const str = String(s || "");
-	return str ? str.charAt(0).toUpperCase() + str.slice(1) : "—";
-  }
-  
+import { ServerPagination } from "@/components/server-pagination";
+
+function titleCase(s: unknown) {
+  const str = String(s || "");
+  return str ? str.charAt(0).toUpperCase() + str.slice(1) : "—";
+}
 
 export function InvoiceList() {
-	const [searchInput, setSearchInput] = useState("");
-const [debouncedSearch, setDebouncedSearch] = useState("");
+  // Server pagination state
+  const [page, setPage] = useState(1);   // 1-based (API)
+  const [limit, setLimit] = useState(10);
 
-const [statusFilter, setStatusFilter] = useState<"all" | InvoiceType["status"]>("all");
-const [paymentFilter, setPaymentFilter] = useState<"all" | InvoiceType["paymentStatus"]>("all");
+  const [searchInput, setSearchInput] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
 
-useEffect(() => {
-  const t = setTimeout(() => setDebouncedSearch(searchInput.trim()), 400);
-  return () => clearTimeout(t);
-}, [searchInput]);
+  const [statusFilter, setStatusFilter] = useState<"all" | InvoiceType["status"]>("all");
+  const [paymentFilter, setPaymentFilter] = useState<"all" | InvoiceType["paymentStatus"]>("all");
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchInput.trim()), 400);
+    return () => clearTimeout(t);
+  }, [searchInput]);
+
+  // When filters/search change, reset to page 1 (very important)
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, statusFilter, paymentFilter, limit]);
 
   const [createSheetOpen, setCreateSheetOpen] = useState(false);
   const [editSheetOpen, setEditSheetOpen] = useState(false);
@@ -49,22 +59,22 @@ useEffect(() => {
   const [deletingInvoice, setDeletingInvoice] = useState<InvoiceType | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-//   const { data: invoiceData, error, mutate: mutateInvoices } = useInvoices({
-//     page: 1,
-//     limit: 100,
-//   });
-const { data: invoiceData, error, mutate: mutateInvoices } = useInvoices({
-	page: 1,
-	limit: 100,
-	search: debouncedSearch,
-	status: statusFilter,
-	paymentStatus: paymentFilter,
-	sortBy: "invoiceDate",
-	sortOrder: "desc",
+  const { data: invoiceData, error, mutate: mutateInvoices } = useInvoices({
+    page,
+    limit,
+    search: debouncedSearch,
+    status: statusFilter === "all" ? "" : statusFilter,
+    paymentStatus: paymentFilter === "all" ? "" : paymentFilter,
+    sortBy: "invoiceDate",
+    sortOrder: "desc",
   });
 
   const invoices = invoiceData?.data || [];
   const meta = invoiceData?.meta;
+
+  // guard meta values
+  const total = meta?.total ?? 0;
+  const totalPages = meta?.totalPages ?? 1;
 
   const handleViewInvoice = (invoice: InvoiceType) => {
     setViewingInvoice(invoice);
@@ -105,9 +115,6 @@ const { data: invoiceData, error, mutate: mutateInvoices } = useInvoices({
     switch (status) {
       case "draft":
         return "secondary";
-      case "sent":
-      case "paid":
-      case "overdue":
       default:
         return "default";
     }
@@ -119,13 +126,11 @@ const { data: invoiceData, error, mutate: mutateInvoices } = useInvoices({
         return "destructive";
       case "partial":
         return "secondary";
-      case "paid":
       default:
         return "default";
     }
   };
 
-  // ✅ adjust endpoint if needed
   async function deleteInvoice(invoiceId: string) {
     const res = await fetch(`/api/invoice/${invoiceId}`, {
       method: "DELETE",
@@ -135,8 +140,7 @@ const { data: invoiceData, error, mutate: mutateInvoices } = useInvoices({
     const result = await res.json().catch(() => ({}));
 
     if (!res.ok) {
-      const message =
-        result?.error || result?.message || "Failed to delete invoice. Please try again.";
+      const message = result?.error || result?.message || "Failed to delete invoice. Please try again.";
       throw new Error(message);
     }
 
@@ -174,6 +178,9 @@ const { data: invoiceData, error, mutate: mutateInvoices } = useInvoices({
       setDeleteDialogOpen(false);
       setDeletingInvoice(null);
 
+      // If last item deleted on current page, go back a page (optional but nice)
+      if (invoices.length === 1 && page > 1) setPage(page - 1);
+
       mutateInvoices();
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Failed to delete invoice";
@@ -184,18 +191,16 @@ const { data: invoiceData, error, mutate: mutateInvoices } = useInvoices({
     }
   };
 
-  // ---------- Mobile formatting helpers ----------
+  // Mobile formatting helpers
   const shortInvoiceNo = (no?: string) => {
     const s = String(no || "");
     if (!s) return "—";
-    // keep last 6 (usually most distinguishing), fallback slice
     return s.length > 8 ? `…${s.slice(-6)}` : s;
   };
 
   const shortPhone = (phone?: string) => {
     const s = String(phone || "");
     if (!s) return "";
-    // show last 6 digits (better than first 6 for BD numbers)
     return s.length > 6 ? `…${s.slice(-6)}` : s;
   };
 
@@ -209,20 +214,19 @@ const { data: invoiceData, error, mutate: mutateInvoices } = useInvoices({
     return lastInitial ? `${first} ${lastInitial}.` : first;
   };
 
-  const shortDate = (value: any) => {
+  const shortDate = (value: unknown) => {
     try {
-      const d = new Date(value);
+      const d = new Date(String(value));
       if (isNaN(d.getTime())) return "—";
-      // compact: "06 Jan" or "06/01"
       return d.toLocaleDateString(undefined, { day: "2-digit", month: "short" });
     } catch {
       return "—";
     }
   };
 
-  const moneyNoDecimals = (n: any) => `৳${Math.round(Number(n || 0))}`;
+  const moneyNoDecimals = (n: unknown) => `৳${Math.round(Number(n || 0))}`;
 
-  // ---------- Desktop table (unchanged) ----------
+  // Desktop table columns (unchanged)
   const columns = useMemo(
     () => [
       { key: "invoiceNo", header: "Invoice Code" },
@@ -232,9 +236,7 @@ const { data: invoiceData, error, mutate: mutateInvoices } = useInvoices({
         render: (value: unknown, row: InvoiceType) => (
           <div>
             <div className="font-medium">{String(value)}</div>
-            {row.clientMobile && (
-              <div className="text-xs text-muted-foreground">{row.clientMobile}</div>
-            )}
+            {row.clientMobile && <div className="text-xs text-muted-foreground">{row.clientMobile}</div>}
           </div>
         ),
       },
@@ -244,9 +246,7 @@ const { data: invoiceData, error, mutate: mutateInvoices } = useInvoices({
         render: (value: unknown, row: InvoiceType) => (
           <div>
             <div className="font-semibold">৳{Number(value).toFixed(2)}</div>
-            {row.due > 0 && (
-              <div className="text-xs text-red-600">Due: ৳{row.due.toFixed(2)}</div>
-            )}
+            {row.due > 0 && <div className="text-xs text-red-600">Due: ৳{row.due.toFixed(2)}</div>}
           </div>
         ),
       },
@@ -260,7 +260,7 @@ const { data: invoiceData, error, mutate: mutateInvoices } = useInvoices({
             </Badge>
             <div>
               <Badge variant={getPaymentStatusBadgeVariant(row.paymentStatus)} className="text-xs">
-                {String(row.paymentStatus).charAt(0).toUpperCase() + String(row.paymentStatus).slice(1)}
+                {titleCase(row.paymentStatus)}
               </Badge>
             </div>
           </div>
@@ -287,23 +287,11 @@ const { data: invoiceData, error, mutate: mutateInvoices } = useInvoices({
 
   const actions = useMemo(
     () => [
-      {
-        label: <Eye />,
-        onClick: (invoice: InvoiceType) => handleViewInvoice(invoice),
-        variant: "secondary" as const,
-      },
-      {
-        label: <Pencil />,
-        onClick: (invoice: InvoiceType) => handleEditInvoice(invoice),
-        variant: "outline" as const,
-      },
-      {
-        label: <Trash2 />,
-        onClick: (invoice: InvoiceType) => handleDeleteClick(invoice),
-        variant: "destructive" as const,
-      },
+      { label: <Eye />, onClick: (inv: InvoiceType) => handleViewInvoice(inv), variant: "secondary" as const },
+      { label: <Pencil />, onClick: (inv: InvoiceType) => handleEditInvoice(inv), variant: "outline" as const },
+      { label: <Trash2 />, onClick: (inv: InvoiceType) => handleDeleteClick(inv), variant: "destructive" as const },
     ],
-    [viewingInvoice, editingInvoice]
+    []
   );
 
   if (error) {
@@ -318,89 +306,95 @@ const { data: invoiceData, error, mutate: mutateInvoices } = useInvoices({
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Invoice ({meta?.total || 0})</h1>
+        <h1 className="text-2xl font-bold">Invoice ({total})</h1>
 
-        <div className="flex items-center gap-2">
-          <Sheet open={createSheetOpen} onOpenChange={setCreateSheetOpen}>
-            <SheetTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Create Invoice
-              </Button>
-            </SheetTrigger>
-            <SheetContent className="sm:max-w-6xl w-full">
-              <div className="h-full px-4 py-4">
-                <InvoiceForm onSuccess={handleCreateSuccess} />
-              </div>
-            </SheetContent>
-          </Sheet>
+        <Sheet open={createSheetOpen} onOpenChange={setCreateSheetOpen}>
+          <SheetTrigger asChild>
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              Create Invoice
+            </Button>
+          </SheetTrigger>
+          <SheetContent className="sm:max-w-6xl w-full">
+            <div className="h-full px-4 py-4">
+              <InvoiceForm onSuccess={handleCreateSuccess} />
+            </div>
+          </SheetContent>
+        </Sheet>
+      </div>
+
+      {/* Filters */}
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-6">
+        <Input
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          placeholder="Search invoice no / client / phone..."
+          className="h-10 sm:col-span-3"
+        />
+
+        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
+          <SelectTrigger className="h-10 w-full">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All status</SelectItem>
+            <SelectItem value="draft">Draft</SelectItem>
+            <SelectItem value="sent">Sent</SelectItem>
+            <SelectItem value="paid">Paid</SelectItem>
+            <SelectItem value="overdue">Overdue</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select value={paymentFilter} onValueChange={(v) => setPaymentFilter(v as any)}>
+          <SelectTrigger className="h-10 w-full">
+            <SelectValue placeholder="Payment" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All payment</SelectItem>
+            <SelectItem value="unpaid">Unpaid</SelectItem>
+            <SelectItem value="partial">Partial</SelectItem>
+            <SelectItem value="paid">Paid</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <div className="flex justify-end">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setSearchInput("");
+              setStatusFilter("all");
+              setPaymentFilter("all");
+              setLimit(10);
+              setPage(1);
+            }}
+          >
+            Clear filters
+          </Button>
         </div>
       </div>
-	  <div className="grid grid-cols-1 gap-2 sm:grid-cols-6">
-  <Input
-    value={searchInput}
-    onChange={(e) => setSearchInput(e.target.value)}
-    placeholder="Search invoice no / client / phone..."
-    className="h-10 sm:col-span-3"
-  />
 
-  <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
-    <SelectTrigger className="h-10 w-full">
-      <SelectValue placeholder="Status" />
-    </SelectTrigger>
-    <SelectContent>
-      <SelectItem value="all">All status</SelectItem>
-      <SelectItem value="draft">Draft</SelectItem>
-      <SelectItem value="sent">Sent</SelectItem>
-      <SelectItem value="paid">Paid</SelectItem>
-      <SelectItem value="overdue">Overdue</SelectItem>
-    </SelectContent>
-  </Select>
-
-  <Select value={paymentFilter} onValueChange={(v) => setPaymentFilter(v as any)}>
-    <SelectTrigger className="h-10 w-full">
-      <SelectValue placeholder="Payment" />
-    </SelectTrigger>
-    <SelectContent>
-      <SelectItem value="all">All payment</SelectItem>
-      <SelectItem value="unpaid">Unpaid</SelectItem>
-      <SelectItem value="partial">Partial</SelectItem>
-      <SelectItem value="paid">Paid</SelectItem>
-    </SelectContent>
-  </Select>
-
-  <div className="flex justify-end">
-    <Button
-      type="button"
-      variant="outline"
-      size="sm"
-      onClick={() => {
-        setSearchInput("");
-        setStatusFilter("all");
-        setPaymentFilter("all");
-      }}
-    >
-      Clear filters
-    </Button>
-  </div>
-</div>
-
-
+      {/* Body */}
       {!invoiceData && !error ? (
         <div className="flex items-center justify-center py-8">
           <Spinner variant="pinwheel" />
         </div>
       ) : invoices.length === 0 ? (
         <div className="flex items-center justify-center py-8">
-          <p>No invoices found. Create your first invoice to get started.</p>
+          <p>No invoices found.</p>
         </div>
       ) : (
         <>
-          {/*  Mobile: compact grid cards */}
+          {/* ✅ Mobile: cards */}
           <div className="grid grid-cols-1 gap-3 sm:hidden">
-		  {(invoices as InvoiceType[]).map((inv: InvoiceType) => (
-              <div key={String((inv as any)._id || inv.invoiceNo)} className="rounded-2xl border bg-card px-2 py-1.5">
+            {invoices.map((inv: InvoiceType) => (
+              <div
+                key={String((inv as any)._id || inv.invoiceNo)}
+                className="rounded-2xl border bg-card px-2 py-1.5"
+              >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
@@ -416,7 +410,7 @@ const { data: invoiceData, error, mutate: mutateInvoices } = useInvoices({
                     </div>
 
                     <div className="mt-2 flex flex-wrap items-center gap-2">
-                      <Badge variant={getStatusBadgeVariant(inv.status)} className="text-[11px] p-3">
+                      <Badge variant={getStatusBadgeVariant(inv.status)} className="text-[11px] px-2 py-0.5">
                         {titleCase(inv.status)}
                       </Badge>
                       <Badge
@@ -438,7 +432,7 @@ const { data: invoiceData, error, mutate: mutateInvoices } = useInvoices({
                   </div>
                 </div>
 
-                <div className=" flex items-center justify-end gap-2">
+                <div className="mt-2 flex items-center justify-end gap-2">
                   <Button size="sm" variant="secondary" onClick={() => handleViewInvoice(inv)}>
                     <Eye className="h-4 w-4" />
                   </Button>
@@ -451,11 +445,39 @@ const { data: invoiceData, error, mutate: mutateInvoices } = useInvoices({
                 </div>
               </div>
             ))}
+
+            {/* ✅ Mobile pagination */}
+            <ServerPagination
+              page={meta?.page ?? page}
+              totalPages={totalPages}
+              total={total}
+              limit={meta?.limit ?? limit}
+              showingCount={invoices.length}
+              onPageChange={(next) => setPage(next)}
+              onLimitChange={(nextLimit) => {
+                setLimit(nextLimit);
+                setPage(1);
+              }}
+              className="pt-1"
+            />
           </div>
 
-          {/* ✅ Desktop: existing table */}
+          {/* Desktop: table + server pagination (recommended) */}
           <div className="hidden sm:block">
             <SimpleTable data={invoices} columns={columns} actions={actions} showPagination={false} />
+            <ServerPagination
+              page={meta?.page ?? page}
+              totalPages={totalPages}
+              total={total}
+              limit={meta?.limit ?? limit}
+              showingCount={invoices.length}
+              onPageChange={(next) => setPage(next)}
+              onLimitChange={(nextLimit) => {
+                setLimit(nextLimit);
+                setPage(1);
+              }}
+              className="pt-4"
+            />
           </div>
         </>
       )}
@@ -480,7 +502,7 @@ const { data: invoiceData, error, mutate: mutateInvoices } = useInvoices({
         </SheetContent>
       </Sheet>
 
-      {/* ✅ Delete Confirmation Dialog */}
+      {/* Delete Confirmation Dialog */}
       <ConfirmationDialog
         open={deleteDialogOpen}
         onOpenChange={(open) => {
