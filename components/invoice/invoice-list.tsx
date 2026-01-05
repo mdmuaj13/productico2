@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -17,6 +17,8 @@ import { Spinner } from "@/components/ui/shadcn-io/spinner";
 
 import { useInvoices, Invoice as InvoiceType } from "@/hooks/invoice";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
+import { Input } from "../ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 
 function titleCase(s: any) {
 	const str = String(s || "");
@@ -25,6 +27,17 @@ function titleCase(s: any) {
   
 
 export function InvoiceList() {
+	const [searchInput, setSearchInput] = useState("");
+const [debouncedSearch, setDebouncedSearch] = useState("");
+
+const [statusFilter, setStatusFilter] = useState<"all" | InvoiceType["status"]>("all");
+const [paymentFilter, setPaymentFilter] = useState<"all" | InvoiceType["paymentStatus"]>("all");
+
+useEffect(() => {
+  const t = setTimeout(() => setDebouncedSearch(searchInput.trim()), 400);
+  return () => clearTimeout(t);
+}, [searchInput]);
+
   const [createSheetOpen, setCreateSheetOpen] = useState(false);
   const [editSheetOpen, setEditSheetOpen] = useState(false);
   const [viewSheetOpen, setViewSheetOpen] = useState(false);
@@ -36,9 +49,18 @@ export function InvoiceList() {
   const [deletingInvoice, setDeletingInvoice] = useState<InvoiceType | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const { data: invoiceData, error, mutate: mutateInvoices } = useInvoices({
-    page: 1,
-    limit: 100,
+//   const { data: invoiceData, error, mutate: mutateInvoices } = useInvoices({
+//     page: 1,
+//     limit: 100,
+//   });
+const { data: invoiceData, error, mutate: mutateInvoices } = useInvoices({
+	page: 1,
+	limit: 100,
+	search: debouncedSearch,
+	status: statusFilter,
+	paymentStatus: paymentFilter,
+	sortBy: "invoiceDate",
+	sortOrder: "desc",
   });
 
   const invoices = invoiceData?.data || [];
@@ -315,6 +337,55 @@ export function InvoiceList() {
           </Sheet>
         </div>
       </div>
+	  <div className="grid grid-cols-1 gap-2 sm:grid-cols-6">
+  <Input
+    value={searchInput}
+    onChange={(e) => setSearchInput(e.target.value)}
+    placeholder="Search invoice no / client / phone..."
+    className="h-10 sm:col-span-3"
+  />
+
+  <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
+    <SelectTrigger className="h-10 w-full">
+      <SelectValue placeholder="Status" />
+    </SelectTrigger>
+    <SelectContent>
+      <SelectItem value="all">All status</SelectItem>
+      <SelectItem value="draft">Draft</SelectItem>
+      <SelectItem value="sent">Sent</SelectItem>
+      <SelectItem value="paid">Paid</SelectItem>
+      <SelectItem value="overdue">Overdue</SelectItem>
+    </SelectContent>
+  </Select>
+
+  <Select value={paymentFilter} onValueChange={(v) => setPaymentFilter(v as any)}>
+    <SelectTrigger className="h-10 w-full">
+      <SelectValue placeholder="Payment" />
+    </SelectTrigger>
+    <SelectContent>
+      <SelectItem value="all">All payment</SelectItem>
+      <SelectItem value="unpaid">Unpaid</SelectItem>
+      <SelectItem value="partial">Partial</SelectItem>
+      <SelectItem value="paid">Paid</SelectItem>
+    </SelectContent>
+  </Select>
+
+  <div className="flex justify-end">
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      onClick={() => {
+        setSearchInput("");
+        setStatusFilter("all");
+        setPaymentFilter("all");
+      }}
+    >
+      Clear filters
+    </Button>
+  </div>
+</div>
+
 
       {!invoiceData && !error ? (
         <div className="flex items-center justify-center py-8">

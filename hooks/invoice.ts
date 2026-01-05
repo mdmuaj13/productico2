@@ -85,6 +85,16 @@ interface invoiceResponse {
 	};
 }
 
+export type InvoiceQuery = {
+	page?: number;
+	limit?: number;
+	search?: string;
+	status?: string; // "all" | "draft" | "sent" | "paid" | "overdue"
+	paymentStatus?: string; // "all" | "unpaid" | "partial" | "paid"
+	sortBy?: string;
+	sortOrder?: "asc" | "desc";
+  };
+
 /** ===== Hooks ===== */
 
 /**
@@ -97,6 +107,8 @@ export const useInvoices = (params?: {
 	search?: string; // search by invoiceNo or clientName (depends on backend)
 	status?: string; // draft/sent/paid/overdue
 	paymentStatus?: string; // unpaid/partial/paid
+	sortBy?: string;
+	sortOrder?: "asc" | "desc";
 	includeDeleted?: boolean;
 }) => {
 	const queryParams = new URLSearchParams();
@@ -107,6 +119,9 @@ export const useInvoices = (params?: {
 	if (params?.search) queryParams.set('search', params.search);
 	if (params?.status) queryParams.set('status', params.status);
 	if (params?.paymentStatus) queryParams.set('paymentStatus', params.paymentStatus);
+
+	if (params?.sortBy) queryParams.set("sortBy", params.sortBy);
+  	if (params?.sortOrder) queryParams.set("sortOrder", params.sortOrder);
 
 	if (params?.includeDeleted) queryParams.set('includeDeleted', 'true');
 
