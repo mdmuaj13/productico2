@@ -1,127 +1,251 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useMemo } from "react"
-import { useForm, Controller } from "react-hook-form"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useForm, Controller } from "react-hook-form";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import {
-  Trash2,
-  User,
-  ShoppingCart,
-  DollarSign,
-  Package,
-  Minus,
-  Plus,
-  FileText,
-  Calendar,
-  BadgeCheck,
-  CreditCard,
-  Receipt,
-  Search,
-  Warehouse as WarehouseIcon,
-  Layers3,
-  Tag,
-} from "lucide-react"
-import { toast } from "sonner"
-import { OrderFormData } from "@/types/order"
-import { Order as APIOrder, updateOrder } from "@/hooks/orders"
-import { SheetHeader, SheetTitle } from "@/components/ui/sheet"
-import { Badge } from "@/components/ui/badge"
-import { cn } from "@/lib/utils"
-import { Separator } from "@/components/ui/separator"
-import { useProducts } from "@/hooks/products"
-import { useWarehouses } from "@/hooks/warehouses"
+} from "@/components/ui/select";
 
-interface OrderEditFormProps {
-  order: APIOrder
-  onSuccess: () => void
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { SheetHeader, SheetTitle } from "@/components/ui/sheet";
+
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+
+import type { InvoiceFormData } from "@/types/invoice";
+import { useProducts } from "@/hooks/products";
+
+import {
+  CalendarClock,
+  FileText,
+  Plus,
+  Trash2,
+  ChevronsUpDown,
+  Printer,
+} from "lucide-react";
+
+import {
+  DropdownOption,
+  SearchableDropdownWithCustom,
+} from "../searchable-dropdown-with-custom";
+
+import { normalizeApiErrors } from "@/lib/utils/form-error";
+
+/** adjust this type to your real Invoice type */
+type InvoiceItemApi = {
+  _id: string;
+  title: string;
+  price: number;
+  basePrice?: number;
+  quantity: number;
+  lineTotal: number;
+
+  slug?: string;
+  description?: string;
+  shortDetail?: string;
+  thumbnail?: string;
+
+  variantName?: string | null;
+  variantPrice?: number | null;
+  variantSalePrice?: number | null;
+  warehouseId?: string | null;
+};
+
+type InvoiceApi = {
+  _id: string;
+
+  invoiceNo: string;
+  invoiceDate: string;
+  dueDate: string;
+
+  clientName: string;
+  clientMobile: string;
+  clientEmail?: string;
+  clientAddress: string;
+  clientDistrict?: string; // you used clientCity in UI, but backend stores district
+
+  status: "draft" | "sent" | "paid" | "overdue";
+  paymentStatus: "unpaid" | "partial" | "paid";
+
+  discount: number;
+  tax: number;
+  paid: number;
+
+  subTotal: number;
+  total: number;
+  due: number;
+
+  notes?: string;
+  terms?: string;
+
+  items: InvoiceItemApi[];
+};
+
+type LineItemUI = {
+  id: string; // maps to item._id
+  title: string;
+  quantity: number;
+  rate: number; // maps to basePrice/price
+  amount: number; // qty * rate
+};
+
+interface InvoiceEditFormProps {
+  invoice: InvoiceApi;
+  onSuccess: () => void;
+  onCancel?: () => void;
+}
+
+/** If you already have uid helper elsewhere, you can remove this */
+function uid() {
+  return `li-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
 function formatMoney(amount: number) {
-  return `৳${amount.toFixed(2)}`
+  return `৳${Number(amount || 0).toFixed(2)}`;
 }
 
-type ProductItem = {
-  _id: string
-  title: string
-  slug: string
-  thumbnail?: string
-  price: number
-  salePrice?: number
-  quantity?: number
-  variants: Array<{
-    name: string
-    price: number
-    salePrice?: number
-    quantity?: number
-  }>
+function toISOFromLocalInput(localValue: string) {
+  // localValue: "YYYY-MM-DDT00:00"
+  const d = new Date(localValue);
+  return isNaN(d.getTime()) ? "" : d.toISOString();
 }
 
-type WarehouseItem = {
-  _id: string
-  title: string
+function toLocalDateInput(dateOrIso?: string | Date) {
+  const d = dateOrIso ? new Date(dateOrIso) : new Date("");
+  if (isNaN(d.getTime())) return ""; // important: allow empty default
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const yyyy = d.getFullYear();
+  const mm = pad(d.getMonth() + 1);
+  const dd = pad(d.getDate());
+  return `${yyyy}-${mm}-${dd}`;
 }
 
-type OrderProductItem = {
-  id: string
-  title: string
-  slug: string // ✅ not optional
-  thumbnail?: string
-  price: number
-  salePrice?: number
-  quantity: number
-  lineTotal: number
-  variantName: string | null
-  warehouseId: string | null
-}
+export function InvoiceEditForm({
+  invoice,
+  onSuccess,
+  onCancel,
+}: InvoiceEditFormProps) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPreview, setShowPreview] = useState(true);
+  const [apiErrors, setApiErrors] = useState<
+    Array<{ field?: string; message: string }>
+  >([]);
 
-export function OrderEditForm({ order, onSuccess }: OrderEditFormProps) {
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  // Only preview should print
+  const previewPrintRef = useRef<HTMLDivElement | null>(null);
 
-  // Fetch catalog products + warehouses (for search panel)
-  const [searchQuery, setSearchQuery] = useState("")
-  const { data: productsData } = useProducts({ limit: 100, search: searchQuery })
-  const { data: warehousesData } = useWarehouses({ limit: 100 })
+  const handlePrintPreviewOnly = () => {
+    const node = previewPrintRef.current;
+    if (!node) {
+      toast.error("Nothing to print");
+      return;
+    }
 
-  const catalogProducts: ProductItem[] = productsData?.data || []
-  const warehouses: WarehouseItem[] = warehousesData?.data || []
+    const printWindow = window.open("", "_blank", "width=900,height=650");
+    if (!printWindow) {
+      toast.error("Popup blocked. Please allow popups to print.");
+      return;
+    }
 
-  // ✅ Fix TS issue: ensure slug is always string (fallback to empty string)
-  const mappedProducts: OrderProductItem[] = useMemo(
-    () =>
-      order.products.map((p) => ({
-        id: p._id,
-        title: p.title ?? "",
-        slug: p.slug ?? "", // ✅ FIX: never undefined
-        thumbnail: p.thumbnail,
-        price: (p.price ?? 0) as number, // ✅ ensure number
-        salePrice: p.variantSalePrice || undefined,
-        quantity: p.quantity ?? 1,
-        lineTotal: p.lineTotal ?? 0,
-        variantName: p.variantName ?? null,
-        warehouseId: p.warehouseId ?? null,
-      })),
-    [order.products]
-  )
+    // Copy styles (best-effort)
+    const styleLinks = Array.from(
+      document.querySelectorAll('link[rel="stylesheet"]')
+    )
+      .map((link) => (link as HTMLLinkElement).href)
+      .filter(Boolean)
+      .map((href) => `<link rel="stylesheet" href="${href}" />`)
+      .join("\n");
 
-  const [products, setProducts] = useState<OrderProductItem[]>(mappedProducts)
+    const inlineStyles = Array.from(document.querySelectorAll("style"))
+      .map((style) => style.outerHTML)
+      .join("\n");
 
-  const initialDate = useMemo(() => {
-    const d = order.createdAt ? new Date(order.createdAt) : new Date()
-    return d.toISOString().split("T")[0]
-  }, [order.createdAt])
+    printWindow.document.open();
+    printWindow.document.write(`
+      <!doctype html>
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
+          <title>Invoice</title>
+          ${styleLinks}
+          ${inlineStyles}
+          <style>
+            @page { margin: 16mm; }
+            body { background: white; }
+            * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          </style>
+        </head>
+        <body>
+          <div id="print-root"></div>
+          <script>
+            window.onload = function () {
+              window.focus();
+              window.print();
+              window.close();
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
 
-  const [orderDate, setOrderDate] = useState(initialDate)
+    const root = printWindow.document.getElementById("print-root");
+    if (root) root.innerHTML = node.outerHTML;
+  };
+
+  // Fetch products (dropdown list)
+  const { data: productsData } = useProducts({ limit: 200, search: "" });
+
+  const productOptions: DropdownOption[] = useMemo(() => {
+    const list = productsData?.data || [];
+    return list.map((p: any) => ({
+      _id: String(p._id),
+      title: String(p.title ?? ""),
+      price: typeof p.price === "number" ? p.price : Number(p.price || 0),
+      salePrice: p.salePrice != null ? Number(p.salePrice) : undefined,
+    }));
+  }, [productsData]);
+
+  // Map invoice items to UI state
+  const initialItems: LineItemUI[] = useMemo(() => {
+    const src = invoice?.items || [];
+    if (src.length === 0) {
+      return [{ id: uid(), title: "", quantity: 1, rate: 0, amount: 0 }];
+    }
+
+    return src.map((it) => {
+      const rate = Number(
+        typeof it.basePrice === "number" ? it.basePrice : it.price || 0
+      );
+      const qty = Number(it.quantity || 1);
+      return {
+        id: String(it._id || uid()),
+        title: String(it.title || ""),
+        quantity: qty,
+        rate,
+        amount: Math.max(qty * rate, 0),
+      };
+    });
+  }, [invoice]);
+
+  const [items, setItems] = useState<LineItemUI[]>(initialItems);
+
+  // Keep items in sync if invoice prop changes (drawer reopen etc.)
+  useEffect(() => {
+    setItems(initialItems);
+  }, [initialItems]);
 
   const {
     register,
@@ -129,815 +253,876 @@ export function OrderEditForm({ order, onSuccess }: OrderEditFormProps) {
     watch,
     setValue,
     control,
+    setError,
+    clearErrors,
     formState: { errors },
-  } = useForm<OrderFormData>({
+  } = useForm<InvoiceFormData>({
     defaultValues: {
-      name: order.customerName,
-      contact_number: order.customerMobile,
-      email: order.customerEmail,
-      address: order.customerAddress,
-      city: order.customerDistrict || "",
-      order_code: order.code,
-      order_date: order.createdAt,
-      order_status: order.status as OrderFormData["order_status"],
-      order_payment_status: order.paymentStatus as OrderFormData["order_payment_status"],
-      discount_code: "",
-      discount_amount: order.discount,
-      delivery_cost: order.deliveryCost,
-      paid_amount: order.paid,
-      remark: order.remark,
-    },
-  })
+      invoiceNo: invoice.invoiceNo,
+      invoiceDate: invoice.invoiceDate || new Date().toISOString(),
+      // Due date required + allow empty if missing
+      dueDate: invoice.dueDate || "",
 
-  const watchDiscountAmount = watch("discount_amount", 0)
-  const watchDeliveryCost = watch("delivery_cost", 0)
-  const watchPaidAmount = watch("paid_amount", 0)
+      clientName: invoice.clientName || "",
+      clientMobile: invoice.clientMobile || "",
+      clientEmail: invoice.clientEmail || "",
+      clientAddress: invoice.clientAddress || "",
+      clientCity: (invoice as any).clientDistrict || "",
+
+      status: invoice.status || "draft",
+      paymentStatus: invoice.paymentStatus || "unpaid",
+
+      discount: Number(invoice.discount || 0),
+      tax: Number(invoice.tax || 0),
+      paid: Number(invoice.paid || 0),
+
+      notes: invoice.notes || "",
+      terms: invoice.terms || "",
+    } as any,
+  });
+
+  const clientName = watch("clientName") || "—";
+  const clientEmail = watch("clientEmail") || "";
+  const clientMobile = watch("clientMobile") || "";
+  const clientAddress = watch("clientAddress") || "—";
+  const clientCity = watch("clientCity") || "";
+
+  const invoiceNo = watch("invoiceNo") || invoice.invoiceNo;
+  const invoiceDateISO = watch("invoiceDate") || invoice.invoiceDate;
+  const dueDateISO = watch("dueDate") || "";
+
+  const discount = Number(watch("discount") || 0);
+  const tax = Number(watch("tax") || 0);
+  const paid = Number(watch("paid") || 0);
+
+  const notes = watch("notes") || "";
+  const terms = watch("terms") || "";
 
   const subTotal = useMemo(
-    () => products.reduce((sum, product) => sum + product.lineTotal, 0),
-    [products]
-  )
+    () => items.reduce((sum, it) => sum + Number(it.amount || 0), 0),
+    [items]
+  );
 
-  const orderAmount = useMemo(
-    () => subTotal - (watchDiscountAmount || 0) + (watchDeliveryCost || 0),
-    [subTotal, watchDiscountAmount, watchDeliveryCost]
-  )
-
-  const dueAmount = useMemo(
-    () => orderAmount - (watchPaidAmount || 0),
-    [orderAmount, watchPaidAmount]
-  )
+  const total = Math.max(subTotal - discount + tax, 0);
+  const due = Math.max(total - paid, 0);
 
   useEffect(() => {
-    setValue("order_amount", orderAmount)
-    setValue("due_amount", dueAmount)
-  }, [orderAmount, dueAmount, setValue])
+    setValue("subTotal", subTotal as any);
+    setValue("total", total as any);
+    setValue("due", due as any);
+  }, [subTotal, total, due, setValue]);
 
-  const recalcLineTotal = (p: OrderProductItem) => {
-    const effective = typeof p.salePrice === "number" && p.salePrice > 0 ? p.salePrice : p.price
-    return (effective || 0) * (p.quantity || 0)
-  }
+  const updateItem = (id: string, patch: Partial<LineItemUI>) => {
+    setItems((prev) =>
+      prev.map((it) => {
+        if (it.id !== id) return it;
+        const next = { ...it, ...patch };
+        const qty = Number(next.quantity || 0);
+        const rate = Number(next.rate || 0);
+        next.amount = Math.max(qty * rate, 0);
+        return next;
+      })
+    );
+  };
 
-  const updateProduct = (index: number, patch: Partial<OrderProductItem>) => {
-    setProducts((prev) => {
-      const next = [...prev]
-      const current = next[index]
-      if (!current) return prev
-      const merged: OrderProductItem = { ...current, ...patch }
-      merged.lineTotal = recalcLineTotal(merged)
-      next[index] = merged
-      return next
-    })
-  }
+  const addItem = () =>
+    setItems((prev) => [
+      ...prev,
+      { id: uid(), title: "", quantity: 1, rate: 0, amount: 0 },
+    ]);
 
-  const removeProduct = (index: number) => {
-    setProducts((prev) => prev.filter((_, i) => i !== index))
-  }
+  const removeItem = (id: string) =>
+    setItems((prev) => prev.filter((it) => it.id !== id));
 
-  const updateQuantity = (index: number, delta: number) => {
-    const curr = products[index]
-    const nextQty = Math.max(1, (curr?.quantity || 1) + delta)
-    updateProduct(index, { quantity: nextQty })
-  }
+  const validateItems = () => {
+    if (items.length === 0) return "Please add at least one item.";
+    const invalid = items.some(
+      (it) =>
+        !it.id?.trim() ||
+        !it.title.trim() ||
+        Number(it.quantity) <= 0 ||
+        Number(it.rate) < 0
+    );
+    if (invalid) return "Please fill item name and valid quantity/rate.";
+    return null;
+  };
 
-  // Add from catalog (variant + warehouse recorded, but NOT shown in order list UI)
-  const addProductFromCatalog = (product: ProductItem, warehouseId: string | null, variantName: string | null) => {
-    const variant = variantName ? product.variants?.find((v) => v.name === variantName) ?? null : null
+  const validateDueDate = () => {
+    const iso = watch("dueDate");
+    if (!iso || !String(iso).trim()) {
+      setError("dueDate" as any, {
+        type: "required",
+        message: "Due date is required",
+      });
+      return false;
+    }
+    return true;
+  };
 
-    const basePrice = variant?.price ?? product.price
-    const salePrice = variant?.salePrice ?? product.salePrice
-    const effective = salePrice ?? basePrice
+  const onSubmit = async (data: InvoiceFormData) => {
+    clearErrors();
+    setApiErrors([]);
 
-    const newProduct: OrderProductItem = {
-      id: `temp-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-      title: product.title,
-      slug: product.slug ?? "", // ✅ FIX: keep string
-      thumbnail: product.thumbnail,
-      price: basePrice,
-      salePrice: salePrice ?? undefined,
-      quantity: 1,
-      lineTotal: effective,
-      variantName,
-      warehouseId,
+    const itemError = validateItems();
+    if (itemError) {
+      toast.error(itemError);
+      return;
     }
 
-    setProducts((prev) => [...prev, newProduct])
-    toast.success("Added to order")
-  }
-
-  const onSubmit = async (data: OrderFormData) => {
-    if (products.length === 0) {
-      toast.error("Please add at least one product")
-      return
+    if (!validateDueDate()) {
+      toast.error("Due date is required");
+      return;
     }
 
-    const invalidProduct = products.find((p) => !p.title || p.price <= 0 || p.quantity <= 0)
-    if (invalidProduct) {
-      toast.error("Please fill in all product details")
-      return
-    }
-
-    setIsSubmitting(true)
-
-    const apiData = {
-      customerName: data.name,
-      customerMobile: data.contact_number,
-      customerEmail: data.email,
-      customerAddress: data.address,
-      customerDistrict: data.city,
-      code: data.order_code,
-      products: products.map((p) => ({
-        _id: p.id,
-        title: p.title,
-        slug: p.slug || "",
-        thumbnail: p.thumbnail,
-        basePrice: p.price,
-        price: typeof p.salePrice === "number" && p.salePrice > 0 ? p.salePrice : p.price,
-        quantity: p.quantity,
-        lineTotal: p.lineTotal,
-        variantName: p.variantName ?? null,
-        variantPrice: p.variantName ? p.price : null,
-        variantSalePrice: typeof p.salePrice === "number" && p.salePrice > 0 ? p.salePrice : null,
-        warehouseId: p.warehouseId ?? null,
-      })),
-      discount: data.discount_amount || 0,
-      deliveryCost: data.delivery_cost || 0,
-      paid: data.paid_amount || 0,
-      status: data.order_status,
-      paymentStatus: data.order_payment_status,
-      remark: data.remark,
-      tax: 0,
-      paymentType: "cash" as const,
-    }
+    setIsSubmitting(true);
 
     try {
-      await updateOrder(order._id, apiData)
-      toast.success("Order updated successfully")
-      onSuccess()
-    } catch (error: unknown) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Failed to update order"
-      toast.error(errorMessage)
-      console.error(error)
+      // IMPORTANT: match your invoiceItemSchema
+      const payloadItems = items.map((it) => ({
+        _id: String(it.id), // REQUIRED STRING ID
+        title: String(it.title),
+        basePrice: Number(it.rate || 0),
+        price: Number(it.rate || 0),
+        quantity: Number(it.quantity || 1),
+        lineTotal: Number(it.amount || 0),
+      }));
+
+      const payload = {
+        clientName: data.clientName,
+        clientMobile: data.clientMobile,
+        clientEmail: data.clientEmail,
+        clientAddress: data.clientAddress,
+        clientDistrict: (data as any).clientCity ?? "",
+
+        invoiceNo: data.invoiceNo,
+        invoiceDate: data.invoiceDate,
+        dueDate: data.dueDate,
+
+        items: payloadItems,
+
+        subTotal,
+        discount,
+        tax,
+        total,
+
+        paid,
+        due,
+
+        paymentStatus: data.paymentStatus,
+        paymentType: (data as any).paymentType ?? "cash",
+        status: data.status,
+
+        notes: data.notes,
+        terms: data.terms,
+      };
+
+      // ✅ Adjust this URL if your backend differs
+      const res = await fetch(`/api/invoice/${invoice._id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await res.json();
+
+      if (!res.ok) {
+        const parsed = normalizeApiErrors(result);
+
+        setApiErrors(parsed);
+
+        parsed.forEach((e) => {
+          if (!e.field) return;
+          setError(e.field as any, { type: "server", message: e.message });
+        });
+
+        toast.error(parsed[0]?.message || "Validation error");
+        return;
+      }
+
+      toast.success("Invoice updated successfully");
+      onSuccess();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Something went wrong";
+      toast.error(msg);
+      console.error(e);
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
+  };
 
   return (
-    <div className="h-full overflow-y-auto px-3 sm:px-5">
-      <SheetHeader className="mb-5 pt-2">
-        <div className="flex items-start justify-between gap-3">
+    <div className="h-full overflow-y-auto px-2 md:px-4 pb-6">
+      {/* Top Bar */}
+      <SheetHeader className="mb-4">
+        <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <SheetTitle className="flex items-center gap-2 text-xl">
-              <ShoppingCart className="h-5 w-5" />
-              Edit Order
+            <SheetTitle className="text-xl md:text-2xl flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Edit Invoice
             </SheetTitle>
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              <Badge variant="secondary" className="font-mono">
-                {order.code}
-              </Badge>
-              <Badge variant="secondary" className="gap-1">
-                <Calendar className="h-3.5 w-3.5" />
-                {new Date(order.createdAt).toLocaleDateString()}
-              </Badge>
-            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {onCancel ? (
+              <Button type="button" variant="outline" onClick={onCancel}>
+                Cancel
+              </Button>
+            ) : null}
+
+            <Button
+              type="button"
+              variant="outline"
+              className="hidden sm:inline-flex"
+              onClick={() => setShowPreview((v) => !v)}
+            >
+              {showPreview ? "Hide Preview" : "Show Preview"}
+            </Button>
+
+            <Button
+              type="submit"
+              onClick={handleSubmit(onSubmit)}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? "Updating…" : "Update Invoice"}
+            </Button>
           </div>
         </div>
       </SheetHeader>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 pb-8">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          {/* Customer */}
-          <Card className="overflow-hidden">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <User className="h-4 w-4" />
-                Customer
-              </CardTitle>
-            </CardHeader>
+      <form onSubmit={handleSubmit(onSubmit)}>
+        {/* API errors block */}
+        {apiErrors.length > 0 && (
+          <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm mb-4">
+            <ul className="list-disc pl-5 space-y-1 text-red-700">
+              {apiErrors.map((e, idx) => (
+                <li key={idx}>
+                  {e.field ? (
+                    <span className="font-medium">{e.field}: </span>
+                  ) : null}
+                  {e.message}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
-            <CardContent className="space-y-4">
-              <div className="space-y-3">
-                <div>
-                  <Label htmlFor="name" className="text-sm">
-                    Name <span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    id="name"
-                    {...register("name", { required: "Name is required" })}
-                    placeholder="Customer name"
-                    className={cn("h-10", errors.name && "border-red-500")}
-                  />
-                  {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name.message}</p>}
+        <div
+          className={cn(
+            "grid gap-4",
+            showPreview ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-1"
+          )}
+        >
+          {/* LEFT */}
+          <div className="space-y-4">
+            {/* Invoice details */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Invoice details</CardTitle>
+              </CardHeader>
+
+              <CardContent className="space-y-4">
+                {/* Bill to */}
+                <div className="space-y-2">
+                  <Label className="text-sm">Bill to</Label>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <Label
+                        htmlFor="clientName"
+                        className="text-xs text-muted-foreground"
+                      >
+                        Client name <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="clientName"
+                        placeholder="Acme Enterprise"
+                        {...register("clientName", {
+                          required: "Client name is required",
+                        })}
+                        className={cn(
+                          (errors as any).clientName && "border-red-500"
+                        )}
+                      />
+                      {(errors as any).clientName && (
+                        <p className="text-xs text-red-500 mt-1">
+                          {(errors as any).clientName.message}
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <Label
+                        htmlFor="clientEmail"
+                        className="text-xs text-muted-foreground"
+                      >
+                        Email
+                      </Label>
+                      <Input
+                        id="clientEmail"
+                        type="email"
+                        placeholder="acme@enterprise.com"
+                        {...register("clientEmail")}
+                      />
+                    </div>
+
+                    <div>
+                      <Label
+                        htmlFor="clientMobile"
+                        className="text-xs text-muted-foreground"
+                      >
+                        Phone <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="clientMobile"
+                        placeholder="01XXXXXXXXX"
+                        {...register("clientMobile", {
+                          required: "Mobile is required",
+                        })}
+                        className={cn(
+                          (errors as any).clientMobile && "border-red-500"
+                        )}
+                      />
+                      {(errors as any).clientMobile && (
+                        <p className="text-xs text-red-500 mt-1">
+                          {(errors as any).clientMobile.message}
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <Label
+                        htmlFor="clientCity"
+                        className="text-xs text-muted-foreground"
+                      >
+                        City
+                      </Label>
+                      <Input
+                        id="clientCity"
+                        placeholder="Dhaka"
+                        {...register("clientCity")}
+                      />
+                    </div>
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Invoice no + dates */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
-                    <Label htmlFor="contact_number" className="text-sm">
-                      Contact <span className="text-red-500">*</span>
+                    <Label htmlFor="invoiceNo" className="text-sm">
+                      Invoice number
                     </Label>
                     <Input
-                      id="contact_number"
-                      {...register("contact_number", { required: "Contact is required" })}
-                      placeholder="Phone number"
-                      className={cn("h-10", errors.contact_number && "border-red-500")}
+                      id="invoiceNo"
+                      readOnly
+                      className="bg-muted font-mono text-xs"
+                      {...register("invoiceNo")}
                     />
-                    {errors.contact_number && (
-                      <p className="text-xs text-red-500 mt-1">{errors.contact_number.message}</p>
+                  </div>
+
+                  <div>
+                    <Label
+                      htmlFor="dueDate"
+                      className="text-sm flex items-center gap-2"
+                    >
+                      <CalendarClock className="h-4 w-4" />
+                      Due date <span className="text-red-500">*</span>
+                    </Label>
+
+                    <Input
+                      id="dueDate"
+                      type="date"
+                      value={toLocalDateInput(dueDateISO)}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        const iso = v ? toISOFromLocalInput(`${v}T00:00`) : "";
+                        setValue("dueDate", iso as any);
+                        if (!iso) {
+                          setError("dueDate" as any, {
+                            type: "required",
+                            message: "Due date is required",
+                          });
+                        } else {
+                          clearErrors("dueDate" as any);
+                        }
+                      }}
+                      className={cn((errors as any).dueDate && "border-red-500")}
+                    />
+                    {(errors as any).dueDate && (
+                      <p className="text-xs text-red-500 mt-1">
+                        {(errors as any).dueDate.message}
+                      </p>
                     )}
                   </div>
-
-                  <div>
-                    <Label htmlFor="email" className="text-sm">
-                      Email
-                    </Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      {...register("email")}
-                      placeholder="customer@example.com"
-                      className="h-10"
-                    />
-                  </div>
                 </div>
 
                 <div>
-                  <Label htmlFor="address" className="text-sm">
-                    Address <span className="text-red-500">*</span>
-                  </Label>
-                  <Textarea
-                    id="address"
-                    {...register("address", { required: "Address is required" })}
-                    placeholder="Delivery address"
-                    rows={3}
-                    className={cn("min-h-[90px] resize-none", errors.address && "border-red-500")}
-                  />
-                  {errors.address && <p className="text-xs text-red-500 mt-1">{errors.address.message}</p>}
-                </div>
-
-                <div>
-                  <Label htmlFor="city" className="text-sm">
-                    City <span className="text-red-500">*</span>
+                  <Label
+                    htmlFor="invoiceDate"
+                    className="text-sm flex items-center gap-2"
+                  >
+                    <CalendarClock className="h-4 w-4" />
+                    Invoice date
                   </Label>
                   <Input
-                    id="city"
-                    {...register("city", { required: "City is required" })}
-                    placeholder="City"
-                    className={cn("h-10", errors.city && "border-red-500")}
-                  />
-                  {errors.city && <p className="text-xs text-red-500 mt-1">{errors.city.message}</p>}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Order Details */}
-          <Card className="overflow-hidden">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Package className="h-4 w-4" />
-                Order Details
-              </CardTitle>
-            </CardHeader>
-
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <Label htmlFor="order_code" className="text-sm">
-                    Order Code
-                  </Label>
-                  <Input id="order_code" {...register("order_code")} readOnly className="h-10 bg-muted font-mono" />
-                </div>
-
-                <div>
-                  <Label htmlFor="order_date" className="text-sm">
-                    Order Date
-                  </Label>
-                  <Input
-                    id="order_date"
+                    id="invoiceDate"
                     type="date"
-                    value={orderDate}
-                    className="h-10"
+                    value={toLocalDateInput(invoiceDateISO)}
                     onChange={(e) => {
-                      setOrderDate(e.target.value)
-                      setValue("order_date", new Date(e.target.value).toISOString())
+                      const v = e.target.value;
+                      const iso = v ? toISOFromLocalInput(`${v}T00:00`) : "";
+                      if (iso) setValue("invoiceDate", iso as any);
                     }}
                   />
                 </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <Label className="text-sm">Order Status</Label>
-                  <Controller
-                    name="order_status"
-                    control={control}
-                    render={({ field }) => (
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <SelectTrigger className="h-10">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="pending">Pending</SelectItem>
-                          <SelectItem value="processing">Processing</SelectItem>
-                          <SelectItem value="confirmed">Confirmed</SelectItem>
-                          <SelectItem value="shipped">Shipped</SelectItem>
-                          <SelectItem value="delivered">Delivered</SelectItem>
-                          <SelectItem value="cancelled">Cancelled</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-                </div>
 
                 <div>
-                  <Label className="text-sm">Payment Status</Label>
-                  <Controller
-                    name="order_payment_status"
-                    control={control}
-                    render={({ field }) => (
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <SelectTrigger className="h-10">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="unpaid">Unpaid</SelectItem>
-                          <SelectItem value="partial">Partial</SelectItem>
-                          <SelectItem value="paid">Paid</SelectItem>
-                        </SelectContent>
-                      </Select>
+                  <Label htmlFor="clientAddress" className="text-sm">
+                    Address <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="clientAddress"
+                    placeholder="1901 Thornridge Cir. Shiloh..."
+                    {...register("clientAddress", {
+                      required: "Address is required",
+                    })}
+                    className={cn(
+                      (errors as any).clientAddress && "border-red-500"
                     )}
                   />
+                  {(errors as any).clientAddress && (
+                    <p className="text-xs text-red-500 mt-1">
+                      {(errors as any).clientAddress.message}
+                    </p>
+                  )}
                 </div>
-              </div>
 
-              <div className="rounded-xl border bg-accent/20 p-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-sm font-medium">
-                    <BadgeCheck className="h-4 w-4 text-primary" />
-                    Current Total
+                {/* Status + payment */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-sm">Status</Label>
+                    <Controller
+                      name="status"
+                      control={control}
+                      render={({ field }) => (
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value as any}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="draft">Draft</SelectItem>
+                            <SelectItem value="sent">Sent</SelectItem>
+                            <SelectItem value="paid">Paid</SelectItem>
+                            <SelectItem value="overdue">Overdue</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
                   </div>
-                  <div className="text-sm font-semibold">{formatMoney(orderAmount)}</div>
-                </div>
-                <div className="mt-2 text-xs text-muted-foreground">
-                  Due updates automatically when you change paid/discount/delivery.
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
 
-        {/* ✅ Products */}
-        <Card className="overflow-hidden">
-          <CardHeader className="pb-3">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <Package className="h-4 w-4" />
-                <CardTitle className="text-base">Products</CardTitle>
-                <Badge variant="secondary" className="ml-1">
-                  {products.length} {products.length === 1 ? "item" : "items"}
-                </Badge>
-              </div>
-            </div>
-          </CardHeader>
-
-          <CardContent className="p-4">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <ProductSearchPanel
-                products={catalogProducts}
-                warehouses={warehouses}
-                searchQuery={searchQuery}
-                setSearchQuery={setSearchQuery}
-                onPick={(product, warehouseId, variantName) => addProductFromCatalog(product, warehouseId, variantName)}
-              />
-
-              <div className="space-y-3">
-                {products.length === 0 ? (
-                  <div className="text-center py-10 text-muted-foreground rounded-2xl border">
-                    <Package className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                    <p className="text-sm">No products added yet</p>
-                    <p className="text-xs mt-1">Click a product on the left to add items</p>
+                  <div>
+                    <Label className="text-sm">Payment</Label>
+                    <Controller
+                      name="paymentStatus"
+                      control={control}
+                      render={({ field }) => (
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value as any}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select payment status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="unpaid">Unpaid</SelectItem>
+                            <SelectItem value="partial">Partial</SelectItem>
+                            <SelectItem value="paid">Paid</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
                   </div>
-                ) : (
-                  products.map((product, index) => (
-                    <div
-                      key={product.id}
-                      className="relative rounded-2xl border bg-card p-4 transition hover:bg-accent/5"
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Invoice items */}
+            <Card>
+              <CardHeader className="pb-2 flex flex-row items-center justify-between">
+                <CardTitle className="text-base">Invoice items</CardTitle>
+                <Button type="button" variant="outline" size="sm" onClick={addItem}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add item
+                </Button>
+              </CardHeader>
+
+              <CardContent>
+                <div className="grid grid-cols-12 gap-2 text-xs text-muted-foreground mb-2">
+                  <div className="col-span-6 flex items-center gap-2">
+                    <span>Items</span>
+                    <span className="inline-flex items-center gap-1 text-[11px]">
+                      <ChevronsUpDown className="h-3 w-3" /> searchable
+                    </span>
+                  </div>
+                  <div className="col-span-2 text-right">QTY</div>
+                  <div className="col-span-2 text-right">Rate</div>
+                </div>
+
+                <div className="space-y-2">
+                  {items.map((it) => (
+                    <div key={it.id} className="grid grid-cols-12 gap-2 items-center">
+                      <div className="col-span-6">
+                        <SearchableDropdownWithCustom
+                          options={productOptions}
+                          value={it.title}
+                          onChange={(title, meta) => {
+                            updateItem(it.id, {
+                              title,
+                              rate: meta?.price ?? it.rate,
+                            });
+                          }}
+                          placeholder="Select product or type…"
+                        />
+                      </div>
+
+                      <div className="col-span-2">
+                        <Input
+                          type="number"
+                          min={1}
+                          value={it.quantity}
+                          onChange={(e) =>
+                            updateItem(it.id, {
+                              quantity: Number(e.target.value || 1),
+                            })
+                          }
+                          className="text-right"
+                        />
+                      </div>
+
+                      <div className="col-span-3">
+                        <Input
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          value={it.rate}
+                          onChange={(e) =>
+                            updateItem(it.id, { rate: Number(e.target.value || 0) })
+                          }
+                          className="text-right"
+                        />
+                      </div>
+
+                      <div className="col-span-1 flex items-center justify-end gap-2">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeItem(it.id)}
+                          className="text-red-500 hover:text-red-600"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* notes/terms + totals box */}
+                <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-sm">Notes</Label>
+                    <Textarea rows={3} placeholder="Any notes..." {...register("notes")} />
+                  </div>
+                  <div>
+                    <Label className="text-sm">Terms</Label>
+                    <Textarea rows={3} placeholder="Payment terms..." {...register("terms")} />
+                  </div>
+                </div>
+
+                <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div>
+                    <Label className="text-sm">Discount (৳)</Label>
+                    <Input type="number" min={0} step="0.01" {...register("discount", { valueAsNumber: true })} />
+                  </div>
+                  <div>
+                    <Label className="text-sm">Tax (৳)</Label>
+                    <Input type="number" min={0} step="0.01" {...register("tax", { valueAsNumber: true })} />
+                  </div>
+                  <div>
+                    <Label className="text-sm">Paid (৳)</Label>
+                    <Input type="number" min={0} step="0.01" {...register("paid", { valueAsNumber: true })} />
+                  </div>
+                </div>
+
+                <div className="mt-4 ml-auto w-full md:w-72 rounded-xl border p-3 space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Subtotal</span>
+                    <span className="font-medium">{formatMoney(subTotal)}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Discount</span>
+                    <span className="font-medium">{formatMoney(discount)}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Tax</span>
+                    <span className="font-medium">{formatMoney(tax)}</span>
+                  </div>
+                  <div className="h-px bg-border my-2" />
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold">Total</span>
+                    <span className="font-bold">{formatMoney(total)}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Due</span>
+                    <span
+                      className={cn("font-bold", due > 0 ? "text-red-600" : "text-emerald-600")}
                     >
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="absolute top-2 right-2 h-9 w-9"
-                        onClick={() => removeProduct(index)}
-                        aria-label="Remove product"
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
+                      {formatMoney(due)}
+                    </span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-                      <div className="space-y-4 pr-10">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          <div className="sm:col-span-2">
-                            <Label className="text-xs">Product Title *</Label>
-                            <Input
-                              value={product.title}
-                              onChange={(e) => updateProduct(index, { title: e.target.value })}
-                              placeholder="Product name"
-                              className="h-10"
-                            />
-                          </div>
+            {/* Mobile save */}
+            <div className="lg:hidden">
+              <Button type="submit" className="w-full" disabled={isSubmitting}>
+                {isSubmitting ? "Updating…" : "Update Invoice"}
+              </Button>
+            </div>
+          </div>
 
-                          <div>
-                            <Label className="text-xs">Price *</Label>
-                            <Input
-                              type="number"
-                              value={product.price}
-                              onChange={(e) => updateProduct(index, { price: parseFloat(e.target.value) || 0 })}
-                              placeholder="0.00"
-                              step="0.01"
-                              className="h-10"
-                            />
-                          </div>
+          {/* RIGHT: Preview */}
+          {showPreview ? (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base">Preview</CardTitle>
 
-                          <div>
-                            <Label className="text-xs">Sale Price</Label>
-                            <Input
-                              type="number"
-                              value={product.salePrice ?? ""}
-                              onChange={(e) => {
-                                const raw = e.target.value
-                                updateProduct(index, { salePrice: raw === "" ? undefined : parseFloat(raw) || 0 })
-                              }}
-                              placeholder="0.00"
-                              step="0.01"
-                              className="h-10"
-                            />
-                            <p className="mt-1 text-[11px] text-muted-foreground">Leave empty to use base price.</p>
-                          </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handlePrintPreviewOnly}
+                >
+                  <Printer className="h-4 w-4 mr-2" />
+                  Print
+                </Button>
+              </div>
+
+              <Card className="sticky top-3">
+                <CardContent className="p-4">
+                  {/* Printable root */}
+                  <div
+                    ref={previewPrintRef}
+                    className="rounded-2xl border p-5 bg-card"
+                  >
+                    {/* Header row */}
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="text-2xl font-bold">Invoice</div>
+                        <div className="mt-2 text-sm text-muted-foreground">
+                          Invoice Number{" "}
+                          <span className="font-mono text-foreground ml-2">
+                            {invoiceNo}
+                          </span>
                         </div>
+                      </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          <div>
-                            <Label className="text-xs">Quantity *</Label>
-                            <div className="flex items-center gap-2">
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="icon"
-                                className="h-8 w-10 rounded-xl"
-                                onClick={() => updateQuantity(index, -1)}
-                                disabled={product.quantity <= 1}
-                                aria-label="Decrease quantity"
-                              >
-                                <Minus className="h-3.5 w-3.5" />
-                              </Button>
-
-                              <Input
-                                type="number"
-                                value={product.quantity}
-                                onChange={(e) => updateProduct(index, { quantity: parseInt(e.target.value) || 1 })}
-                                min="1"
-                                className="h-8 text-center"
-                              />
-
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="icon"
-                                className="h-8 w-10 rounded-xl"
-                                onClick={() => updateQuantity(index, 1)}
-                                aria-label="Increase quantity"
-                              >
-                                <Plus className="h-3.5 w-3.5" />
-                              </Button>
-                            </div>
-                          </div>
-
-                          <div>
-                            <Label className="text-xs">Line Total</Label>
-                            <Input
-                              value={formatMoney(product.lineTotal)}
-                              readOnly
-                              className="h-8 text-sm bg-muted font-semibold"
-                            />
-                          </div>
+                      {/* Invoice date on top-right */}
+                      <div className="text-right">
+                        <div className="text-xs text-muted-foreground flex items-center justify-end gap-1">
+                          <CalendarClock className="h-3.5 w-3.5" />
+                          Invoice date
                         </div>
-
-                        <Separator />
-
-                        <div className="grid grid-cols-3 gap-2 text-xs">
-                          <div className="rounded-xl bg-accent/30 px-2 py-1">
-                            <p className="text-muted-foreground">Price</p>
-                            <p className="text-sm font-semibold">
-                              {formatMoney(
-                                typeof product.salePrice === "number" && product.salePrice > 0 ? product.salePrice : product.price
-                              )}
-                            </p>
-                          </div>
-                          <div className="rounded-xl bg-accent/30 px-2 py-1">
-                            <p className="text-muted-foreground">Qty</p>
-                            <p className="text-sm font-semibold">{product.quantity}</p>
-                          </div>
-                          <div className="rounded-xl bg-accent/30 px-2 py-1">
-                            <p className="text-muted-foreground">Total</p>
-                            <p className="text-sm font-semibold">{formatMoney(product.lineTotal)}</p>
-                          </div>
+                        <div className="text-sm font-semibold">
+                          {invoiceDateISO ? new Date(invoiceDateISO).toLocaleDateString() : "—"}
                         </div>
                       </div>
                     </div>
-                  ))
-                )}
-              </div>
+
+                    {/* Bill/ Due block */}
+                    <div className="mt-5 grid grid-cols-2 gap-3 rounded-xl border">
+                      <div className="p-3">
+                        <div className="text-xs text-muted-foreground">
+                          Billed to
+                        </div>
+                        <div className="mt-1 font-semibold">{clientName}</div>
+                        {clientEmail ? (
+                          <div className="text-xs text-muted-foreground">
+                            {clientEmail}
+                          </div>
+                        ) : null}
+                        {clientMobile ? (
+                          <div className="text-xs text-muted-foreground">
+                            {clientMobile}
+                          </div>
+                        ) : null}
+                      </div>
+
+                      <div className="p-3 border-l">
+                        <div className="text-xs text-muted-foreground">
+                          Due date
+                        </div>
+                        <div className="mt-1 font-semibold">
+                          {dueDateISO ? new Date(dueDateISO).toLocaleDateString() : "—"}
+                        </div>
+                      </div>
+
+                      <div className="col-span-2 p-3 border-t">
+                        <div className="text-xs text-muted-foreground">
+                          Address
+                        </div>
+                        <div className="mt-1 text-sm">
+                          {clientAddress}
+                          {clientCity ? (
+                            <span className="text-muted-foreground">
+                              , {clientCity}
+                            </span>
+                          ) : null}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Items */}
+                    <div className="mt-5 rounded-xl border overflow-hidden">
+                      <div className="grid grid-cols-12 bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+                        <div className="col-span-6">Items</div>
+                        <div className="col-span-2 text-right">QTY</div>
+                        <div className="col-span-2 text-right">Rate</div>
+                        <div className="col-span-2 text-right">Total</div>
+                      </div>
+
+                      <div className="divide-y">
+                        {items.map((it) => (
+                          <div
+                            key={it.id}
+                            className="grid grid-cols-12 px-3 py-2 text-sm"
+                          >
+                            <div className="col-span-6 font-medium">
+                              {it.title || "—"}
+                            </div>
+                            <div className="col-span-2 text-right">
+                              {it.quantity}
+                            </div>
+
+                            {/* No decimals */}
+                            <div className="col-span-2 text-right">
+                              {Math.round(it.rate)}
+                            </div>
+                            <div className="col-span-2 text-right font-semibold">
+                              {Math.round(it.amount)}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Summary */}
+                    <div className="mt-5 flex justify-end">
+                      <div className="w-full sm:w-72 rounded-xl border p-3 space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">
+                            Subtotal
+                          </span>
+                          <span className="font-medium">
+                            {formatMoney(subTotal)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">
+                            Discount
+                          </span>
+                          <span className="font-medium">
+                            {formatMoney(discount)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Tax</span>
+                          <span className="font-medium">
+                            {formatMoney(tax)}
+                          </span>
+                        </div>
+                        <div className="h-px bg-border my-2" />
+                        <div className="flex justify-between">
+                          <span className="font-semibold">Total</span>
+                          <span className="font-bold">
+                            {formatMoney(total)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Paid</span>
+                          <span className="font-medium">
+                            {formatMoney(paid)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Due</span>
+                          <span
+                            className={cn(
+                              "font-bold",
+                              due > 0 ? "text-red-600" : "text-emerald-600"
+                            )}
+                          >
+                            {formatMoney(due)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Status badges */}
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <Badge variant="secondary" className="capitalize">
+                        {watch("status") || "draft"}
+                      </Badge>
+                      <Badge
+                        variant={
+                          watch("paymentStatus") === "unpaid"
+                            ? "destructive"
+                            : watch("paymentStatus") === "partial"
+                            ? "secondary"
+                            : "default"
+                        }
+                        className="capitalize"
+                      >
+                        {watch("paymentStatus") || "unpaid"}
+                      </Badge>
+                    </div>
+
+                    {/* Notes & Terms bottom */}
+                    {(notes || terms) && (
+                      <div className="mt-6 space-y-3">
+                        {notes && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-semibold text-muted-foreground">
+                              * Notes :
+                            </span>
+                            <span className="text-xs leading-relaxed whitespace-pre-wrap">
+                              {notes}
+                            </span>
+                          </div>
+                        )}
+
+                        {terms && (
+                          <div>
+                            <div className="text-sm font-semibold text-muted-foreground mb-1">
+                              * Terms
+                            </div>
+                            <div className="text-xs leading-relaxed whitespace-pre-wrap">
+                              {terms}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Financial Summary */}
-        <Card className="overflow-hidden">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Receipt className="h-4 w-4" />
-              Financial Summary
-            </CardTitle>
-          </CardHeader>
-
-          <CardContent className="space-y-4">
-            <div className="rounded-2xl border bg-muted/30 p-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-sm font-medium">
-                  <DollarSign className="h-4 w-4" />
-                  Subtotal
-                </div>
-                <div className="text-sm font-semibold">{formatMoney(subTotal)}</div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <Label htmlFor="discount_amount" className="text-sm">
-                  Discount
-                </Label>
-                <Input
-                  id="discount_amount"
-                  type="number"
-                  {...register("discount_amount", { valueAsNumber: true })}
-                  placeholder="0.00"
-                  step="0.01"
-                  className="h-10"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="delivery_cost" className="text-sm">
-                  Delivery Cost
-                </Label>
-                <Input
-                  id="delivery_cost"
-                  type="number"
-                  {...register("delivery_cost", { valueAsNumber: true })}
-                  placeholder="0.00"
-                  step="0.01"
-                  className="h-10"
-                />
-              </div>
-            </div>
-
-            <div className="rounded-2xl border bg-primary/10 p-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-sm font-semibold">
-                  <CreditCard className="h-4 w-4 text-primary" />
-                  Total Amount
-                </div>
-                <div className="text-lg font-bold text-primary">{formatMoney(orderAmount)}</div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <Label htmlFor="paid_amount" className="text-sm">
-                  Paid Amount
-                </Label>
-                <Input
-                  id="paid_amount"
-                  type="number"
-                  {...register("paid_amount", { valueAsNumber: true })}
-                  placeholder="0.00"
-                  step="0.01"
-                  className="h-10"
-                />
-              </div>
-
-              <div>
-                <Label className="text-sm">Due Amount</Label>
-                <Input
-                  value={formatMoney(dueAmount)}
-                  readOnly
-                  className={cn(
-                    "h-10 bg-muted font-semibold",
-                    dueAmount > 0 ? "text-destructive" : "text-emerald-600"
-                  )}
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Notes */}
-        <Card className="overflow-hidden">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <FileText className="h-4 w-4" />
-              Additional Notes
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Label htmlFor="remark" className="text-sm">
-              Remark
-            </Label>
-            <Textarea
-              id="remark"
-              {...register("remark")}
-              placeholder="Any additional notes about this order..."
-              rows={3}
-              className="resize-none"
-            />
-          </CardContent>
-        </Card>
-
-        {/* Sticky action bar */}
-        <div className="sticky bottom-0 -mx-3 sm:-mx-5 border-t bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          <div className="px-3 sm:px-5 py-3">
-            <Button type="submit" disabled={isSubmitting} className="w-full" size="lg">
-              {isSubmitting ? "Updating Order..." : "Update Order"}
-            </Button>
-          </div>
+          ) : null}
         </div>
       </form>
     </div>
-  )
-}
-
-/** LEFT: product list scrollable + limited height + bottom controls for Variant + Warehouse */
-function ProductSearchPanel({
-  products,
-  warehouses,
-  searchQuery,
-  setSearchQuery,
-  onPick,
-}: {
-  products: ProductItem[]
-  warehouses: WarehouseItem[]
-  searchQuery: string
-  setSearchQuery: (v: string) => void
-  onPick: (product: ProductItem, warehouseId: string | null, variantName: string | null) => void
-}) {
-  const NONE_WAREHOUSE = "__none__"
-  const BASE_VARIANT = "__base__"
-
-  const [selectedWarehouse, setSelectedWarehouse] = useState<string>(NONE_WAREHOUSE)
-  const [selectedVariant, setSelectedVariant] = useState<string>(BASE_VARIANT)
-  const [activeProduct, setActiveProduct] = useState<ProductItem | null>(null)
-
-  const variantOptions = useMemo(() => {
-    if (!activeProduct) return []
-    return (activeProduct.variants || []).map((v) => v.name)
-  }, [activeProduct])
-
-  return (
-    <Card className="h-full flex flex-col">
-      <CardHeader className="pb-3 border-b">
-        <CardTitle className="text-sm flex items-center gap-2">
-          <Search className="h-4 w-4" />
-          Add Products
-        </CardTitle>
-      </CardHeader>
-
-      <CardContent className="p-3 space-y-3 flex-1 flex flex-col">
-        {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search products..."
-            className="pl-9"
-          />
-        </div>
-
-        {/* ✅ Scrollable list with limited height */}
-        <div className="border rounded-xl divide-y overflow-y-auto max-h-[420px]">
-          {products.length === 0 ? (
-            <div className="p-4 text-center text-muted-foreground">No products found</div>
-          ) : (
-            products.map((p) => (
-              <button
-                key={p._id}
-                type="button"
-                onMouseEnter={() => {
-                  setActiveProduct(p)
-                  if (selectedVariant !== BASE_VARIANT && !p.variants?.some((v) => v.name === selectedVariant)) {
-                    setSelectedVariant(BASE_VARIANT)
-                  }
-                }}
-                onClick={() => {
-                  const warehouseId = selectedWarehouse === NONE_WAREHOUSE ? null : selectedWarehouse
-                  const variantName = selectedVariant === BASE_VARIANT ? null : selectedVariant
-                  onPick(p, warehouseId, variantName)
-                }}
-                className="w-full text-left p-3 hover:bg-accent transition-colors flex gap-2"
-              >
-                {p.thumbnail && (
-                  <div className="bg-gray-100 rounded-lg p-1 flex-shrink-0">
-                    <img src={p.thumbnail} alt={p.title} className="w-10 h-10 object-cover rounded-md" />
-                  </div>
-                )}
-
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-2">
-                    <h4 className="font-medium text-sm truncate">{p.title}</h4>
-                    <span className="text-sm font-semibold text-primary whitespace-nowrap">
-                      ৳{p.salePrice || p.price}
-                    </span>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-2 mt-1">
-                    {p.variants?.length > 0 && (
-                      <Badge variant="outline" className="text-xs">
-                        {p.variants.length} variants
-                      </Badge>
-                    )}
-                    <Badge variant="secondary" className="text-xs">
-                      Stock: {p.quantity || 0}
-                    </Badge>
-                  </div>
-
-                  <p className="text-[11px] text-muted-foreground mt-1">Click to add</p>
-                </div>
-              </button>
-            ))
-          )}
-        </div>
-
-        {/* Bottom controls */}
-        <div className="pt-3 border-t space-y-3">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label className="text-xs flex items-center gap-2">
-                <Layers3 className="h-3.5 w-3.5" />
-                Variant (optional)
-              </Label>
-
-              <Select value={selectedVariant} onValueChange={setSelectedVariant}>
-                <SelectTrigger className="h-11 rounded-xl">
-                  <div className="flex items-center gap-2">
-                    <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-accent text-muted-foreground">
-                      <Tag className="h-4 w-4" />
-                    </span>
-                    <SelectValue placeholder="Base product" />
-                  </div>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={BASE_VARIANT}>Base product</SelectItem>
-                  {variantOptions.map((name) => (
-                    <SelectItem key={name} value={name}>
-                      {name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <p className="text-[11px] text-muted-foreground">Hover a product to load its variants here.</p>
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-xs flex items-center gap-2">
-                <WarehouseIcon className="h-3.5 w-3.5" />
-                Warehouse (optional)
-              </Label>
-
-              <Select value={selectedWarehouse} onValueChange={setSelectedWarehouse}>
-                <SelectTrigger className="h-11 rounded-xl">
-                  <div className="flex items-center gap-2">
-                    <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-accent text-muted-foreground">
-                      <WarehouseIcon className="h-4 w-4" />
-                    </span>
-                    <SelectValue placeholder="No warehouse" />
-                  </div>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={NONE_WAREHOUSE}>No warehouse</SelectItem>
-                  {warehouses.map((w) => (
-                    <SelectItem key={w._id} value={w._id}>
-                      {w.title}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  )
+  );
 }

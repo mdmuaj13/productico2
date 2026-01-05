@@ -11,6 +11,7 @@ import { SimpleTable } from '@/components/simple-table';
 import { Badge } from '@/components/ui/badge';
 import { Spinner } from '@/components/ui/shadcn-io/spinner';
 import { useInvoices, Invoice as InvoiceType } from '@/hooks/invoice';
+import { InvoiceEditForm } from './edit-form';
 
 export function InvoiceList() {
 	const [createSheetOpen, setCreateSheetOpen] = useState(false);
@@ -238,15 +239,15 @@ export function InvoiceList() {
 			</Sheet>
 
 			{/* Edit Sheet */}
-			{/* <Sheet open={editSheetOpen} onOpenChange={setEditSheetOpen}>
-				<SheetContent className="sm:max-w-4xl w-full">
+			<Sheet open={editSheetOpen} onOpenChange={setEditSheetOpen}>
+				<SheetContent className="sm:max-w-6xl w-full">
 					<div className="h-full">
 						{editingInvoice && (
 							<InvoiceEditForm invoice={editingInvoice} onSuccess={handleEditSuccess} />
 						)}
 					</div>
 				</SheetContent>
-			</Sheet> */}
+			</Sheet>
 		</div>
 	);
 }

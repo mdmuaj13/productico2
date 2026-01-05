@@ -1,413 +1,443 @@
-'use client';
+"use client";
 
-import * as React from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import * as React from "react";
+import { useRef } from "react";
+
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+
 import {
-	Edit,
-	Package,
-	User,
-	MapPin,
-	Phone,
-	Mail,
-	CreditCard,
-	Calendar,
-	Hash,
-	StickyNote,
-	CircleDot,
-	FileText,
-	CalendarClock,
-	Receipt,
-} from 'lucide-react';
+  Edit,
+  CircleDot,
+  Printer,
+  CalendarClock,
+  FileText,
+} from "lucide-react";
 
-import {Invoice as InvoiceType, InvoiceItem} from '@/hooks/invoice';
+import { Invoice as InvoiceType, InvoiceItem } from "@/hooks/invoice";
 
 interface InvoiceViewProps {
-	invoice: InvoiceType;
-	onEdit: () => void;
-	onSuccess: () => void; // kept for parity if you use it
-}
-
-function cn(...classes: Array<string | false | null | undefined>) {
-	return classes.filter(Boolean).join(' ');
+  invoice: InvoiceType;
+  onEdit: () => void;
+  onSuccess: () => void;
 }
 
 function formatMoney(amount: number) {
-	return `৳${amount.toFixed(2)}`;
-}
-
-function formatDateTime(input: string | number | Date) {
-	try {
-		return new Date(input).toLocaleString();
-	} catch {
-		return String(input);
-	}
+  return `৳${Number(amount || 0).toFixed(2)}`;
 }
 
 function titleCase(s: string) {
-	return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
 }
 
-function invoiceStatusBadgeVariant(status: InvoiceType['status']) {
-	switch (status) {
-		case 'overdue':
-			return 'destructive';
-		case 'draft':
-			return 'secondary';
-		case 'sent':
-		case 'paid':
-		default:
-			return 'default';
-	}
+function invoiceStatusBadgeVariant(status: InvoiceType["status"]) {
+  switch (status) {
+    case "overdue":
+      return "destructive";
+    case "draft":
+      return "secondary";
+    case "sent":
+    case "paid":
+    default:
+      return "default";
+  }
 }
 
-function paymentBadgeVariant(status: InvoiceType['paymentStatus']) {
-	switch (status) {
-		case 'unpaid':
-			return 'destructive';
-		case 'partial':
-			return 'secondary';
-		case 'paid':
-		default:
-			return 'default';
-	}
+function paymentBadgeVariant(status: InvoiceType["paymentStatus"]) {
+  switch (status) {
+    case "unpaid":
+      return "destructive";
+    case "partial":
+      return "secondary";
+    case "paid":
+    default:
+      return "default";
+  }
 }
 
-function KeyValue({
-	icon,
-	label,
-	value,
-	className,
-	mono,
-}: {
-	icon?: React.ReactNode;
-	label: string;
-	value: React.ReactNode;
-	className?: string;
-	mono?: boolean;
-}) {
-	return (
-		<div className={cn('flex items-start gap-3 rounded-xl border bg-card p-3', className)}>
-			<div className="mt-0.5 shrink-0 text-muted-foreground">{icon}</div>
-			<div className="min-w-0 flex-1">
-				<p className="text-xs text-muted-foreground">{label}</p>
-				<div className={cn('text-sm font-medium break-words', mono && 'font-mono')}>
-					{value}
-				</div>
-			</div>
-		</div>
-	);
+function toDateLabel(input: any) {
+  try {
+    const d = new Date(input);
+    return isNaN(d.getTime()) ? "—" : d.toLocaleDateString();
+  } catch {
+    return "—";
+  }
 }
 
 export function InvoiceView({ invoice, onEdit }: InvoiceViewProps) {
-	const dueIsPositive = invoice.due > 0;
+  const previewPrintRef = useRef<HTMLDivElement | null>(null);
 
-	return (
-		<div className="h-full overflow-y-auto pb-6 px-2 md:px-6">
-			{/* Header */}
-			<SheetHeader className="mb-5">
-				<div className="flex items-start justify-between gap-3">
-					<div className="min-w-0">
-						<SheetTitle className="text-2xl">Invoice</SheetTitle>
+  const dueIsPositive = Number(invoice.due || 0) > 0;
 
-						<div className="mt-1 flex flex-wrap items-center gap-2">
-							<Badge variant="secondary" className="font-mono">
-								{invoice.invoiceNo}
-							</Badge>
+  const handlePrintPreviewOnly = () => {
+    const node = previewPrintRef.current;
+    if (!node) {
+      toast.error("Nothing to print");
+      return;
+    }
 
-							<Badge variant={invoiceStatusBadgeVariant(invoice.status)} className="gap-1">
-								<CircleDot className="h-3.5 w-3.5" />
-								{titleCase(invoice.status)}
-							</Badge>
+    const printWindow = window.open("", "_blank", "width=900,height=650");
+    if (!printWindow) {
+      toast.error("Popup blocked. Please allow popups to print.");
+      return;
+    }
 
-							<Badge variant={paymentBadgeVariant(invoice.paymentStatus)}>
-								{titleCase(invoice.paymentStatus)}
-							</Badge>
-						</div>
-					</div>
+    // Copy styles (best-effort)
+    const styleLinks = Array.from(
+      document.querySelectorAll('link[rel="stylesheet"]')
+    )
+      .map((link) => (link as HTMLLinkElement).href)
+      .filter(Boolean)
+      .map((href) => `<link rel="stylesheet" href="${href}" />`)
+      .join("\n");
 
-					<Button onClick={onEdit} size="sm" variant="outline" className="shrink-0">
-						<Edit className="h-4 w-4 mr-2" />
-						Edit
-					</Button>
-				</div>
-			</SheetHeader>
+    const inlineStyles = Array.from(document.querySelectorAll("style"))
+      .map((style) => style.outerHTML)
+      .join("\n");
 
-			<div className="space-y-2">
-				{/* Client */}
-				<Card className="overflow-hidden">
-					<CardHeader>
-						<CardTitle className="text-base flex items-center gap-2">
-							<User className="h-4 w-4" />
-							Client
-						</CardTitle>
-					</CardHeader>
+    printWindow.document.open();
+    printWindow.document.write(`
+      <!doctype html>
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
+          <title>Invoice</title>
+          ${styleLinks}
+          ${inlineStyles}
+          <style>
+            @page { margin: 16mm; }
+            body { background: white; }
+            * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          </style>
+        </head>
+        <body>
+          <div id="print-root"></div>
+          <script>
+            window.onload = function () {
+              window.focus();
+              window.print();
+              window.close();
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
 
-					<CardContent className="grid gap-3 sm:grid-cols-2">
-						<KeyValue
-							icon={<User className="h-4 w-4" />}
-							label="Name"
-							value={invoice.clientName}
-						/>
-						<KeyValue
-							icon={<Phone className="h-4 w-4" />}
-							label="Mobile"
-							value={invoice.clientMobile}
-							mono
-						/>
-						{invoice.clientEmail ? (
-							<KeyValue
-								icon={<Mail className="h-4 w-4" />}
-								label="Email"
-								value={invoice.clientEmail}
-							/>
-						) : null}
+    const root = printWindow.document.getElementById("print-root");
+    if (root) root.innerHTML = node.outerHTML;
+  };
 
-						<KeyValue
-							icon={<MapPin className="h-4 w-4" />}
-							label="Address"
-							value={
-								<div className="space-y-1">
-									<div>{invoice.clientAddress}</div>
-									{/* If you store district/city in clientDistrict */}
-									{(invoice as any).clientDistrict ? (
-										<div className="text-xs text-muted-foreground">
-											{(invoice as any).clientDistrict}
-										</div>
-									) : null}
-								</div>
-							}
-							className="sm:col-span-2"
-						/>
-					</CardContent>
-				</Card>
+  const invoiceNo = invoice.invoiceNo || "—";
 
-				{/* Invoice details */}
-				<Card className="overflow-hidden">
-					<CardHeader>
-						<CardTitle className="text-base flex items-center gap-2">
-							<FileText className="h-4 w-4" />
-							Invoice Details
-						</CardTitle>
-					</CardHeader>
+  const clientName = invoice.clientName || "—";
+  const clientEmail = invoice.clientEmail || "";
+  const clientMobile = invoice.clientMobile || "";
+  const clientAddress = invoice.clientAddress || "—";
+  const clientDistrict = (invoice as any).clientDistrict || "";
 
-					<CardContent className="grid gap-3 sm:grid-cols-2">
-						<KeyValue
-							icon={<Hash className="h-4 w-4" />}
-							label="Invoice No"
-							value={invoice.invoiceNo}
-							mono
-						/>
-						{invoice.referenceNo ? (
-							<KeyValue
-								icon={<Receipt className="h-4 w-4" />}
-								label="Reference No"
-								value={invoice.referenceNo}
-								mono
-							/>
-						) : null}
+  const invoiceDate = toDateLabel(invoice.invoiceDate);
+  const dueDate = toDateLabel(invoice.dueDate);
 
-						<KeyValue
-							icon={<Calendar className="h-4 w-4" />}
-							label="Invoice Date"
-							value={formatDateTime(invoice.invoiceDate)}
-						/>
-						<KeyValue
-							icon={<CalendarClock className="h-4 w-4" />}
-							label="Due Date"
-							value={formatDateTime(invoice.dueDate)}
-						/>
-					</CardContent>
-				</Card>
+  const items: InvoiceItem[] = invoice.items || [];
 
-				{/* Items */}
-				<Card className="overflow-hidden">
-					<CardHeader>
-						<CardTitle className="text-base flex items-center gap-2">
-							<Package className="h-4 w-4" />
-							Items
-							<Badge variant="secondary" className="ml-2">
-								{invoice.items.length}
-							</Badge>
-						</CardTitle>
-					</CardHeader>
+  const subTotal = Number(invoice.subTotal || 0);
+  const discount = Number(invoice.discount || 0);
+  const tax = Number(invoice.tax || 0);
+  const total = Number(invoice.total || 0);
+  const paid = Number(invoice.paid || 0);
+  const due = Number(invoice.due || 0);
 
-					<CardContent className="space-y-3">
-						{invoice.items.map((item: InvoiceItem, index: number) => (
-							<div key={index} className="rounded-xl border bg-card p-3">
-								<div className="flex items-start justify-between gap-3">
-									<div className="min-w-0 flex-1">
-										<p className="text-sm font-semibold leading-tight wrap-break-word">
-											{item.title}
-										</p>
-									</div>
+  const notes = invoice.notes || "";
+  const terms = invoice.terms || "";
 
-									<div className="text-right shrink-0">
-										<p className="text-xs text-muted-foreground">Line total</p>
-										<p className="text-sm font-semibold">{formatMoney(item.lineTotal)}</p>
-									</div>
-								</div>
+  return (
+    <div className="h-full overflow-y-auto pb-6 px-2 md:px-6">
+      {/* Header */}
+      <SheetHeader className="mb-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <SheetTitle className="text-2xl">Invoice</SheetTitle>
 
-								<Separator className="my-2" />
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              <Badge variant="secondary" className="font-mono">
+                {invoiceNo}
+              </Badge>
 
-								<div className="grid grid-cols-3 gap-2 text-xs">
-									<div className="rounded-lg bg-accent/30 px-2 py-1">
-										<p className="text-muted-foreground">Price</p>
-										<p className="text-xs font-medium">{formatMoney(item.price)}</p>
-									</div>
-									<div className="rounded-lg bg-accent/30 px-2 py-1">
-										<p className="text-muted-foreground">Qty</p>
-										<p className="text-xs font-medium">{item.quantity}</p>
-									</div>
-									<div className="rounded-lg bg-accent/30 px-2 py-1">
-										<p className="text-muted-foreground">Total</p>
-										<p className="text-xs font-medium">{formatMoney(item.lineTotal)}</p>
-									</div>
-								</div>
-							</div>
-						))}
-					</CardContent>
-				</Card>
+              <Badge
+                variant={invoiceStatusBadgeVariant(invoice.status)}
+                className="gap-1"
+              >
+                <CircleDot className="h-3.5 w-3.5" />
+                {titleCase(invoice.status)}
+              </Badge>
 
-				{/* Summary */}
-				<Card className="overflow-hidden">
-					<CardHeader className="pb-3">
-						<CardTitle className="text-base flex items-center gap-2">
-							<CreditCard className="h-4 w-4" />
-							Summary
-						</CardTitle>
-					</CardHeader>
+              <Badge variant={paymentBadgeVariant(invoice.paymentStatus)}>
+                {titleCase(invoice.paymentStatus)}
+              </Badge>
+            </div>
+          </div>
 
-					<CardContent className="space-y-3">
-						<div className="grid gap-2">
-							<div className="flex items-center justify-between text-sm">
-								<span className="text-muted-foreground">Subtotal</span>
-								<span className="font-medium">{formatMoney(invoice.subTotal)}</span>
-							</div>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              onClick={onEdit}
+              size="sm"
+              variant="outline"
+              className="shrink-0"
+            >
+              <Edit className="h-4 w-4 mr-2" />
+              Edit
+            </Button>
 
-							{invoice.discount > 0 ? (
-								<div className="flex items-center justify-between text-sm">
-									<span className="text-muted-foreground">Discount</span>
-									<span className="font-medium text-emerald-600">
-										-{formatMoney(invoice.discount)}
-									</span>
-								</div>
-							) : null}
+            <Button
+              type="button"
+              onClick={handlePrintPreviewOnly}
+              size="sm"
+              variant="outline"
+              className="shrink-0"
+            >
+              <Printer className="h-4 w-4 mr-2" />
+              Print
+            </Button>
+          </div>
+        </div>
+      </SheetHeader>
 
-							{invoice.tax > 0 ? (
-								<div className="flex items-center justify-between text-sm">
-									<span className="text-muted-foreground">Tax</span>
-									<span className="font-medium">+{formatMoney(invoice.tax)}</span>
-								</div>
-							) : null}
+      {/* Only preview + printable area */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-base">Preview</CardTitle>
+          <div className="text-xs text-muted-foreground">
+            Click <span className="font-medium">Print</span> to print only the
+            preview.
+          </div>
+        </div>
 
-							<Separator />
+        <Card className="overflow-hidden">
+          <CardContent className="p-4">
+            {/* Printable root */}
+            <div
+              ref={previewPrintRef}
+              className="rounded-2xl border p-5 bg-card"
+            >
+              {/* Top section */}
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="text-2xl font-bold">Invoice</div>
+                  <div className="mt-2 text-sm text-muted-foreground">
+                    Invoice Number{" "}
+                    <span className="font-mono text-foreground ml-2">
+                      {invoiceNo}
+                    </span>
+                  </div>
+                </div>
 
-							<div className="rounded-xl border bg-accent/30 p-3">
-								<div className="flex items-center justify-between">
-									<span className="text-sm font-semibold">Total</span>
-									<span className="text-base font-bold text-primary">
-										{formatMoney(invoice.total)}
-									</span>
-								</div>
-							</div>
+                {/* invoice date at top-right */}
+                <div className="text-right">
+                  <div className="text-xs text-muted-foreground flex items-center justify-end gap-1">
+                    <CalendarClock className="h-3.5 w-3.5" />
+                    Invoice date
+                  </div>
+                  <div className="text-sm font-semibold">{invoiceDate}</div>
+                </div>
+              </div>
 
-							<div className="grid gap-2 sm:grid-cols-2">
-								<div className="rounded-xl border bg-card p-3">
-									<p className="text-xs text-muted-foreground">Paid</p>
-									<p className="text-sm font-semibold text-emerald-600">
-										{formatMoney(invoice.paid)}
-									</p>
-								</div>
+              {/* Billed to + due date */}
+              <div className="mt-5 grid grid-cols-2 gap-3 rounded-xl border">
+                <div className="p-3">
+                  <div className="text-xs text-muted-foreground">Billed to</div>
+                  <div className="mt-1 font-semibold">{clientName}</div>
+                  {clientEmail ? (
+                    <div className="text-xs text-muted-foreground">
+                      {clientEmail}
+                    </div>
+                  ) : null}
+                  {clientMobile ? (
+                    <div className="text-xs text-muted-foreground">
+                      {clientMobile}
+                    </div>
+                  ) : null}
+                </div>
 
-								<div className="rounded-xl border bg-card p-3">
-									<p className="text-xs text-muted-foreground">Due</p>
-									<p
-										className={cn(
-											'text-sm font-semibold',
-											dueIsPositive ? 'text-rose-600' : 'text-emerald-600'
-										)}
-									>
-										{formatMoney(invoice.due)}
-									</p>
-								</div>
-							</div>
+                <div className="p-3 border-l">
+                  <div className="text-xs text-muted-foreground">Due date</div>
+                  <div className="mt-1 font-semibold">{dueDate}</div>
 
-							<div className="grid gap-2 sm:grid-cols-2">
-								{/* <KeyValue
-									icon={<CreditCard className="h-4 w-4" />}
-									label="Payment type"
-									value={<span className="capitalize">{invoice.paymentType}</span>}
-								/> */}
-								<KeyValue
-									icon={<CircleDot className="h-4 w-4" />}
-									label="Payment status"
-									value={<span className="capitalize">{invoice.paymentStatus}</span>}
-								/>
-							</div>
-						</div>
-					</CardContent>
-				</Card>
+                  <div className="text-xs text-muted-foreground mt-2">
+                    Payment status
+                  </div>
+                  <div className="mt-1">
+                    <Badge
+                      variant={paymentBadgeVariant(invoice.paymentStatus)}
+                      className="capitalize"
+                    >
+                      {invoice.paymentStatus || "—"}
+                    </Badge>
+                  </div>
+                </div>
 
-				{/* Notes / Terms */}
-				{invoice.notes || invoice.terms ? (
-					<Card className="overflow-hidden">
-						<CardHeader className="pb-3">
-							<CardTitle className="text-base flex items-center gap-2">
-								<StickyNote className="h-4 w-4" />
-								Notes &amp; Terms
-							</CardTitle>
-						</CardHeader>
+                <div className="col-span-2 p-3 border-t">
+                  <div className="text-xs text-muted-foreground">Address</div>
+                  <div className="mt-1 text-sm">
+                    {clientAddress}
+                    {clientDistrict ? (
+                      <span className="text-muted-foreground">
+                        , {clientDistrict}
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
 
-						<CardContent className="space-y-3">
-							{invoice.notes ? (
-								<div>
-									<div className="text-sm font-semibold mb-2">Notes</div>
-									<div className="rounded-xl border bg-accent/30 p-3 text-sm leading-relaxed">
-										{invoice.notes}
-									</div>
-								</div>
-							) : null}
+              {/* Items table */}
+              <div className="mt-5 rounded-xl border overflow-hidden">
+                <div className="grid grid-cols-12 bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+                  <div className="col-span-6">Items</div>
+                  <div className="col-span-2 text-right">QTY</div>
+                  <div className="col-span-2 text-right">Rate</div>
+                  <div className="col-span-2 text-right">Total</div>
+                </div>
 
-							{invoice.terms ? (
-								<div>
-									<div className="text-sm font-semibold mb-2">Terms</div>
-									<div className="rounded-xl border bg-accent/30 p-3 text-sm leading-relaxed">
-										{invoice.terms}
-									</div>
-								</div>
-							) : null}
-						</CardContent>
-					</Card>
-				) : null}
+                <div className="divide-y">
+                  {items.length === 0 ? (
+                    <div className="px-3 py-3 text-sm text-muted-foreground">
+                      No items
+                    </div>
+                  ) : (
+                    items.map((it, idx) => (
+                      <div
+                        key={it._id || `${idx}`}
+                        className="grid grid-cols-12 px-3 py-2 text-sm"
+                      >
+                        <div className="col-span-6 font-medium">
+                          {it.title || "—"}
+                        </div>
+                        <div className="col-span-2 text-right">
+                          {Number(it.quantity || 0)}
+                        </div>
 
-				{/* Meta */}
-				<Card className="overflow-hidden">
-					<CardHeader className="pb-3">
-						<CardTitle className="text-base">Invoice Info</CardTitle>
-					</CardHeader>
+                        {/* remove two decimals for Rate */}
+                        <div className="col-span-2 text-right">
+                          {Math.round(Number((it as any).price ?? 0))}
+                        </div>
 
-					<CardContent className="grid gap-3 sm:grid-cols-2">
-						<KeyValue
-							icon={<Calendar className="h-4 w-4" />}
-							label="Due Date"
-							value={formatDateTime(invoice.dueDate)}
-						/>
-            {
-              invoice?.deletedAt &&
-              <KeyValue
-							icon={<Calendar className="h-4 w-4" />}
-							label="Deleted At"
-							value={formatDateTime(invoice.deletedAt)}
-						/>
-            }
-						
-					</CardContent>
-				</Card>
-			</div>
-		</div>
-	);
+                        {/* remove two decimals for Total */}
+                        <div className="col-span-2 text-right font-semibold">
+                          {Math.round(Number((it as any).lineTotal ?? 0))}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* Totals */}
+              <div className="mt-5 flex justify-end">
+                <div className="w-full sm:w-72 rounded-xl border p-3 space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Subtotal</span>
+                    <span className="font-medium">{formatMoney(subTotal)}</span>
+                  </div>
+
+                  {discount ? (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Discount</span>
+                      <span className="font-medium">
+                        {formatMoney(discount)}
+                      </span>
+                    </div>
+                  ) : null}
+
+                  {tax ? (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Tax</span>
+                      <span className="font-medium">{formatMoney(tax)}</span>
+                    </div>
+                  ) : null}
+
+                  <div className="h-px bg-border my-2" />
+
+                  <div className="flex justify-between">
+                    <span className="font-semibold">Total</span>
+                    <span className="font-bold">{formatMoney(total)}</span>
+                  </div>
+
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Paid</span>
+                    <span className="font-medium">{formatMoney(paid)}</span>
+                  </div>
+
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Due</span>
+                    <span
+                      className={cn(
+                        "font-bold",
+                        dueIsPositive ? "text-red-600" : "text-emerald-600"
+                      )}
+                    >
+                      {formatMoney(due)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Status badges */}
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Badge variant="secondary" className="capitalize">
+                  {invoice.status || "draft"}
+                </Badge>
+                <Badge
+                  variant={paymentBadgeVariant(invoice.paymentStatus)}
+                  className="capitalize"
+                >
+                  {invoice.paymentStatus || "unpaid"}
+                </Badge>
+              </div>
+
+              {/* Notes then Terms at bottom */}
+              {(notes || terms) && (
+                <div className="mt-6 space-y-3">
+                  {notes && (
+                    <div className="flex items-start gap-2">
+                      <span className="text-sm font-semibold text-muted-foreground">
+                        * Notes:
+                      </span>
+                      <span className="text-xs leading-relaxed whitespace-pre-wrap">
+                        {notes}
+                      </span>
+                    </div>
+                  )}
+
+                  {terms && (
+                    <div>
+                      <div className="text-sm font-semibold text-muted-foreground mb-1">
+                        * Terms
+                      </div>
+                      <div className="text-xs leading-relaxed whitespace-pre-wrap">
+                        {terms}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Optional footer/meta */}
+              {(invoice as any).deletedAt ? (
+                <div className="mt-6 text-xs text-muted-foreground flex items-center gap-2">
+                  <FileText className="h-3.5 w-3.5" />
+                  Deleted at: {toDateLabel((invoice as any).deletedAt)}
+                </div>
+              ) : null}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
 }
