@@ -32,6 +32,7 @@ export interface Invoice {
 	clientMobile: string;
 	clientEmail?: string;
 	clientAddress: string;
+	clientCity?: string;
 	clientDistrict?: string;
 
 	// Identifiers

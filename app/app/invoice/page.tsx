@@ -1,4 +1,4 @@
-import { InvoiceList } from '@/components/invoice/orders-list'
+import { InvoiceList } from '@/components/invoice/invoice-list'
 
 const InvoicePage = () => {
   return (

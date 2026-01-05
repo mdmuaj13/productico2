@@ -5,89 +5,84 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Eye, Pencil, Plus } from 'lucide-react';
-import { OrderForm } from './create';
-import { OrderView } from './view';
-import { OrderEditForm } from './edit-form';
+import { InvoiceForm } from './create';
+import { InvoiceView } from './view';
 import { SimpleTable } from '@/components/simple-table';
 import { Badge } from '@/components/ui/badge';
-import { useOrders, Order as OrderType } from '@/hooks/orders';
 import { Spinner } from '@/components/ui/shadcn-io/spinner';
+import { useInvoices, Invoice as InvoiceType } from '@/hooks/invoice';
 
 export function InvoiceList() {
 	const [createSheetOpen, setCreateSheetOpen] = useState(false);
 	const [editSheetOpen, setEditSheetOpen] = useState(false);
 	const [viewSheetOpen, setViewSheetOpen] = useState(false);
-	const [editingOrder, setEditingOrder] = useState<OrderType | null>(null);
-	const [viewingOrder, setViewingOrder] = useState<OrderType | null>(null);
+	const [editingInvoice, setEditingInvoice] = useState<InvoiceType | null>(null);
+	const [viewingInvoice, setViewingInvoice] = useState<InvoiceType | null>(null);
 
 	const {
-		data: ordersData,
+		data: invoiceData,
 		error,
-		mutate: mutateOrders,
-	} = useOrders({
+		mutate: mutateInvoices,
+	} = useInvoices({
 		page: 1,
 		limit: 100,
 	});
 
-	const orders = ordersData?.data || [];
-	const meta = ordersData?.meta;
+	const invoices = invoiceData?.data || [];
+	const meta = invoiceData?.meta;
 
-	const handleViewOrder = (order: OrderType) => {
-		setViewingOrder(order);
+	const handleViewInvoice = (invoice: InvoiceType) => {
+		setViewingInvoice(invoice);
 		setViewSheetOpen(true);
 	};
 
-	const handleEditOrder = (order: OrderType) => {
-		setEditingOrder(order);
+	const handleEditInvoice = (invoice: InvoiceType) => {
+		setEditingInvoice(invoice);
 		setEditSheetOpen(true);
 	};
 
 	const handleViewToEdit = () => {
-		if (viewingOrder) {
+		if (viewingInvoice) {
 			setViewSheetOpen(false);
-			setEditingOrder(viewingOrder);
+			setEditingInvoice(viewingInvoice);
 			setEditSheetOpen(true);
 		}
 	};
 
 	const handleCreateSuccess = () => {
 		setCreateSheetOpen(false);
-		mutateOrders();
+		mutateInvoices();
 	};
 
 	const handleEditSuccess = () => {
 		setEditSheetOpen(false);
-		setEditingOrder(null);
-		mutateOrders();
+		setEditingInvoice(null);
+		mutateInvoices();
 	};
 
 	const handleViewSuccess = () => {
 		setViewSheetOpen(false);
-		setViewingOrder(null);
-		mutateOrders();
+		setViewingInvoice(null);
+		mutateInvoices();
 	};
 
-	const getStatusBadgeVariant = (status: OrderType['status']) => {
+	const getStatusBadgeVariant = (status: InvoiceType['status']) => {
 		switch (status) {
-			case 'pending':
+			case 'draft':
 				return 'secondary';
-			case 'processing':
+			case 'sent':
 				return 'default';
-			case 'confirmed':
+			case 'paid':
 				return 'default';
-			case 'shipped':
+			case 'overdue':
 				return 'default';
-			case 'delivered':
-				return 'default';
-			case 'cancelled':
-				return 'destructive';
 			default:
 				return 'secondary';
 		}
 	};
 
 	const getPaymentStatusBadgeVariant = (
-		status: OrderType['paymentStatus']
+		status: InvoiceType['paymentStatus']
 	) => {
 		switch (status) {
 			case 'unpaid':
@@ -103,30 +98,25 @@ export function InvoiceList() {
 
 	const columns = [
 		{
-			key: 'code',
+			key: 'invoiceNo',
 			header: 'Invoice Code',
 		},
 		{
-			key: 'customerName',
+			key: 'clientName',
 			header: 'Customer',
-			render: (value: unknown, row: OrderType) => (
+			render: (value: unknown, row: InvoiceType) => (
 				<div>
 					<div className="font-medium">{String(value)}</div>
-					{row.customerMobile && (
-						<div className="text-xs text-muted-foreground">{row.customerMobile}</div>
+					{row.clientMobile && (
+						<div className="text-xs text-muted-foreground">{row.clientMobile}</div>
 					)}
 				</div>
 			),
 		},
-		// {
-		// 	key: 'customerDistrict',
-		// 	header: 'District',
-		// 	render: (value: unknown) => (<span>{String(value) || 'N/A'}</span>),
-		// },
 		{
 			key: 'total',
 			header: 'Amount',
-			render: (value: unknown, row: OrderType) => (
+			render: (value: unknown, row: InvoiceType) => (
 				<div>
 					<div className="font-semibold">৳{Number(value).toFixed(2)}</div>
 					{row.due > 0 && (
@@ -138,7 +128,7 @@ export function InvoiceList() {
 		{
 			key: 'status',
 			header: 'Status',
-			render: (value: unknown, row: OrderType) => (
+			render: (value: unknown, row: InvoiceType) => (
 				<div className="space-y-1">
 					<Badge variant={getStatusBadgeVariant(row.status)}>
 						{String(value).charAt(0).toUpperCase() + String(value).slice(1)}
@@ -152,7 +142,7 @@ export function InvoiceList() {
 			),
 		},
 		{
-			key: 'createdAt',
+			key: 'invoiceDate',
 			header: 'Date',
 			render: (value: unknown) => {
 				const date = new Date(String(value));
@@ -169,12 +159,12 @@ export function InvoiceList() {
 	const actions = [
 		{
 			label: <Eye/>,
-			onClick: (order: OrderType) => handleViewOrder(order),
+			onClick: (invoice: InvoiceType) => handleViewInvoice(invoice),
 			variant: 'secondary' as const,
 		},
 		{
 			label: <Pencil/>,
-			onClick: (order: OrderType) => handleEditOrder(order),
+			onClick: (invoice: InvoiceType) => handleEditInvoice(invoice),
 			variant: 'outline' as const,
 		},
 	];
@@ -183,7 +173,7 @@ export function InvoiceList() {
 		return (
 			<Card>
 				<CardContent className="p-6">
-					<p className="text-center text-red-500">Failed to load orders</p>
+					<p className="text-center text-red-500">Failed to load invoices</p>
 				</CardContent>
 			</Card>
 		);
@@ -201,29 +191,29 @@ export function InvoiceList() {
 								Create Invoice
 							</Button>
 						</SheetTrigger>
-						<SheetContent className="sm:max-w-4xl w-full">
+						<SheetContent className="sm:max-w-6xl w-full">
 							<div className="h-full px-4 py-4">
-								<OrderForm onSuccess={handleCreateSuccess} />
+								<InvoiceForm onSuccess={handleCreateSuccess} />
 							</div>
 						</SheetContent>
 					</Sheet>
 				</div>
 			</div>
 
-			{/* Orders Table */}
+			{/* Invoices Table */}
 			<>
 				<>
-					{!ordersData && !error ? (
+					{!invoiceData && !error ? (
 						<div className="flex items-center justify-center py-8">
 							<Spinner variant="pinwheel" />
 						</div>
-					) : orders.length === 0 ? (
+					) : invoices.length === 0 ? (
 						<div className="flex items-center justify-center py-8">
-							<p>No orders found. Create your first order to get started.</p>
+							<p>No invoices found. Create your first invoice to get started.</p>
 						</div>
 					) : (
 						<SimpleTable
-							data={orders}
+							data={invoices}
 							columns={columns}
 							actions={actions}
 							showPagination={false}
@@ -234,11 +224,11 @@ export function InvoiceList() {
 
 			{/* View Sheet */}
 			<Sheet open={viewSheetOpen} onOpenChange={setViewSheetOpen}>
-				<SheetContent className="sm:max-w-[600px] w-full">
+				<SheetContent className="sm:max-w-150 w-full">
 					<div className="h-full">
-						{viewingOrder && (
-							<OrderView
-								order={viewingOrder}
+						{viewingInvoice && (
+							<InvoiceView
+								invoice={viewingInvoice}
 								onEdit={handleViewToEdit}
 								onSuccess={handleViewSuccess}
 							/>
@@ -248,15 +238,15 @@ export function InvoiceList() {
 			</Sheet>
 
 			{/* Edit Sheet */}
-			<Sheet open={editSheetOpen} onOpenChange={setEditSheetOpen}>
+			{/* <Sheet open={editSheetOpen} onOpenChange={setEditSheetOpen}>
 				<SheetContent className="sm:max-w-4xl w-full">
 					<div className="h-full">
-						{editingOrder && (
-							<OrderEditForm order={editingOrder} onSuccess={handleEditSuccess} />
+						{editingInvoice && (
+							<InvoiceEditForm invoice={editingInvoice} onSuccess={handleEditSuccess} />
 						)}
 					</div>
 				</SheetContent>
-			</Sheet>
+			</Sheet> */}
 		</div>
 	);
 }
