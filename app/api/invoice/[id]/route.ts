@@ -67,7 +67,10 @@ export async function PUT(
 
 		// Never allow client to directly set deletion fields via update
 		// (protect audit trail)
+		
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		delete (validatedData as any).isDeleted;
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		delete (validatedData as any).deletedAt;
 
 		// Calculate totals if items are provided
