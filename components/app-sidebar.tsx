@@ -85,6 +85,11 @@ const data = {
 			url: '/app/expenses',
 			icon: IconReceipt,
 		},
+		{
+			title: 'Invoice',
+			url: '/app/invoice',
+			icon: IconFileInvoice,
+		},
 	],
 	navClouds: [],
 	navSecondary: [

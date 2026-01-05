@@ -12,7 +12,8 @@ import {
   BarChart2,
   Users,
   Settings,
-  FileBarChart2
+  FileBarChart2,
+  Paperclip
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -115,6 +116,13 @@ export default function Home() {
       icon: Users,
       href: "/app/users",
       color: "text-green-500"
+    },
+    {
+      title: "Invoice",
+      description: "Manage and print invoice",
+      icon: Paperclip,
+      href: "/app/invoice",
+      color: "text-blue-500"
     },
     {
       title: "Settings",
