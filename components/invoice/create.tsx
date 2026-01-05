@@ -39,6 +39,8 @@ import {
   SearchableDropdownWithCustom,
 } from "../searchable-dropdown-with-custom";
 
+import { normalizeApiErrors } from "@/lib/utils/form-error";
+
 type LineItemUI = {
   id: string;
   title: string; // product title OR custom typed text
@@ -75,6 +77,9 @@ function toLocalDateInput(date: Date) {
 export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPreview, setShowPreview] = useState(true);
+  const [apiErrors, setApiErrors] = useState<
+    Array<{ field?: string; message: string }>
+  >([]);
 
   // Only preview should print
   const previewPrintRef = useRef<HTMLDivElement | null>(null);
@@ -174,6 +179,8 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
     watch,
     setValue,
     control,
+    setError,
+    clearErrors,
     formState: { errors },
   } = useForm<InvoiceFormData>({
     defaultValues: {
@@ -260,6 +267,9 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
   };
 
   const onSubmit = async (data: InvoiceFormData) => {
+    clearErrors();
+    setApiErrors([]);
+
     const itemError = validateItems();
     if (itemError) {
       toast.error(itemError);
@@ -267,13 +277,12 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
     }
 
     setIsSubmitting(true);
-	console.log(items)
     try {
       const payloadItems = items.map((it) => ({
         _id: it.id,
         title: it.title,
         price: Number(it.rate || 0),
-		basePrice: Number(it.rate || 0),
+        basePrice: Number(it.rate || 0),
         quantity: Number(it.quantity || 1),
         lineTotal: it.amount,
       }));
@@ -314,7 +323,26 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
       });
 
       const result = await res.json();
-      if (!res.ok) throw new Error(result?.error || "Failed to create invoice");
+
+      if (!res.ok) {
+        const parsed = normalizeApiErrors(result);
+
+        // set top-level block
+        setApiErrors(parsed);
+
+        // map to RHF field errors (best-effort)
+        parsed.forEach((e) => {
+          if (!e.field) return;
+
+          // if your backend returns nested fields like "items.0.title"
+          // react-hook-form supports this, so it will work.
+          setError(e.field as any, { type: "server", message: e.message });
+        });
+
+        // show toast (first error only to avoid spam)
+        toast.error(parsed[0]?.message || "Validation error");
+        return;
+      }
 
       toast.success("Invoice created successfully");
       onSuccess();
@@ -359,6 +387,21 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
       </SheetHeader>
 
       <form onSubmit={handleSubmit(onSubmit)}>
+        {apiErrors.length > 0 && (
+          <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm mb-4">
+            <ul className="list-disc pl-5 space-y-1 text-red-700">
+              {apiErrors.map((e, idx) => (
+                <li key={idx}>
+                  {e.field ? (
+                    <span className="font-medium">{e.field}: </span>
+                  ) : null}
+                  {e.message}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         <div
           className={cn(
             "grid gap-4",
@@ -756,7 +799,6 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base">Preview</CardTitle>
 
-               
                 <Button
                   type="button"
                   variant="outline"
