@@ -6,11 +6,6 @@ import mongoose, { Schema } from 'mongoose';
  */
 const InvoiceItemSchema = new Schema(
 	{
-		_id: {
-			type: Schema.Types.ObjectId,
-			required: true,
-		},
-
 		// Product reference info (optional but useful)
 		slug: {
 			type: String,
@@ -275,5 +270,4 @@ InvoiceSchema.pre('save', function (next) {
 	next();
 });
 
-export default mongoose.models.Invoice ||
-	mongoose.model('Invoice', InvoiceSchema);
+export default mongoose.models.Invoice || mongoose.model('Invoice', InvoiceSchema);

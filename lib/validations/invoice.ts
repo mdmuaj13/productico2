@@ -3,7 +3,7 @@ import { z } from 'zod';
 // Reuse the same "productSchema" style, but name it invoiceItemSchema if you prefer.
 // This matches your InvoiceItemSchema fields.
 export const invoiceItemSchema = z.object({
-	_id: z.string().min(1, 'Item ID is required'),
+	// _id: z.string().min(1, 'Item ID is required'),
 	slug: z.string().optional(),
 	title: z.string().min(1, 'Item title is required'),
 	description: z.string().optional(),

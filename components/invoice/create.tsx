@@ -279,7 +279,6 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
     setIsSubmitting(true);
     try {
       const payloadItems = items.map((it) => ({
-        _id: it.id,
         title: it.title,
         price: Number(it.rate || 0),
         basePrice: Number(it.rate || 0),
