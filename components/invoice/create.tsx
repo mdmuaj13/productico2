@@ -23,30 +23,23 @@ import { toast } from "sonner";
 import { SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
 import type { InvoiceFormData } from "@/types/invoice";
-import { useProducts } from "@/hooks/products";
 
 import {
   CalendarClock,
   FileText,
   Plus,
   Trash2,
-  ChevronsUpDown,
   Printer,
 } from "lucide-react";
-
-import {
-  DropdownOption,
-  SearchableDropdownWithCustom,
-} from "../searchable-dropdown-with-custom";
 
 import { normalizeApiErrors } from "@/lib/utils/form-error";
 
 type LineItemUI = {
   id: string;
-  title: string; // product title OR custom typed text
+  title: string;
   quantity: number;
-  rate: number; // user-editable
-  amount: number; // qty * rate
+  rate: number; 
+  amount: number; 
 };
 
 interface InvoiceFormProps {
@@ -146,19 +139,6 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
     const root = printWindow.document.getElementById("print-root");
     if (root) root.innerHTML = node.outerHTML;
   };
-
-  // Fetch products (dropdown list)
-  const { data: productsData } = useProducts({ limit: 200, search: "" });
-
-  const productOptions: DropdownOption[] = useMemo(() => {
-    const list = productsData?.data || [];
-    return list.map((p: any) => ({
-      _id: String(p._id),
-      title: String(p.title ?? ""),
-      price: typeof p.price === "number" ? p.price : Number(p.price || 0),
-      salePrice: p.salePrice != null ? Number(p.salePrice) : undefined,
-    }));
-  }, [productsData]);
 
   const invoiceNoDefault = `INV-${Date.now()}`;
 
@@ -633,10 +613,7 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
               <CardContent>
                 <div className="grid grid-cols-12 gap-2 text-xs text-muted-foreground mb-2">
                   <div className="col-span-6 flex items-center gap-2">
-                    <span>Items</span>
-                    <span className="inline-flex items-center gap-1 text-[11px]">
-                      <ChevronsUpDown className="h-3 w-3" /> searchable
-                    </span>
+                    Items
                   </div>
                   <div className="col-span-2 text-right">QTY</div>
                   <div className="col-span-2 text-right">Rate</div>
@@ -648,16 +625,12 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
                       key={it.id}
                       className="grid grid-cols-12 gap-2 items-center">
                       <div className="col-span-6">
-                        <SearchableDropdownWithCustom
-                          options={productOptions}
+                        <Input
                           value={it.title}
-                          onChange={(title, meta) =>
-                            updateItem(it.id, {
-                              title,
-                              rate: meta?.price ?? it.rate,
-                            })
+                          onChange={(e) =>
+                            updateItem(it.id, { title: e.target.value })
                           }
-                          placeholder="Select product or type…"
+                          placeholder="Item name (type anything)"
                         />
                       </div>
 

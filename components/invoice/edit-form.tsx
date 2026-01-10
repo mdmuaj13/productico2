@@ -24,21 +24,8 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 import type { InvoiceFormData } from "@/types/invoice";
-import { useProducts } from "@/hooks/products";
 
-import {
-  CalendarClock,
-  FileText,
-  Plus,
-  Trash2,
-  ChevronsUpDown,
-  Printer,
-} from "lucide-react";
-
-import {
-  DropdownOption,
-  SearchableDropdownWithCustom,
-} from "../searchable-dropdown-with-custom";
+import { CalendarClock, FileText, Plus, Trash2, Printer } from "lucide-react";
 
 import { normalizeApiErrors } from "@/lib/utils/form-error";
 
@@ -73,7 +60,7 @@ type InvoiceApi = {
   clientMobile: string;
   clientEmail?: string;
   clientAddress: string;
-  clientDistrict?: string; // you used clientCity in UI, but backend stores district
+  clientDistrict?: string; // UI uses clientCity but backend stores district
 
   status: "draft" | "sent" | "paid" | "overdue";
   paymentStatus: "unpaid" | "partial" | "paid";
@@ -93,7 +80,7 @@ type InvoiceApi = {
 };
 
 type LineItemUI = {
-  id: string; // maps to item._id
+  id: string; // maps to item._id (or generated)
   title: string;
   quantity: number;
   rate: number; // maps to basePrice/price
@@ -106,7 +93,6 @@ interface InvoiceEditFormProps {
   onCancel?: () => void;
 }
 
-/** If you already have uid helper elsewhere, you can remove this */
 function uid() {
   return `li-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
@@ -116,14 +102,13 @@ function formatMoney(amount: number) {
 }
 
 function toISOFromLocalInput(localValue: string) {
-  // localValue: "YYYY-MM-DDT00:00"
   const d = new Date(localValue);
   return isNaN(d.getTime()) ? "" : d.toISOString();
 }
 
 function toLocalDateInput(dateOrIso?: string | Date) {
   const d = dateOrIso ? new Date(dateOrIso) : new Date("");
-  if (isNaN(d.getTime())) return ""; // important: allow empty default
+  if (isNaN(d.getTime())) return "";
   const pad = (n: number) => String(n).padStart(2, "0");
   const yyyy = d.getFullYear();
   const mm = pad(d.getMonth() + 1);
@@ -142,7 +127,6 @@ export function InvoiceEditForm({
     Array<{ field?: string; message: string }>
   >([]);
 
-  // Only preview should print
   const previewPrintRef = useRef<HTMLDivElement | null>(null);
 
   const handlePrintPreviewOnly = () => {
@@ -158,7 +142,6 @@ export function InvoiceEditForm({
       return;
     }
 
-    // Copy styles (best-effort)
     const styleLinks = Array.from(
       document.querySelectorAll('link[rel="stylesheet"]')
     )
@@ -205,19 +188,6 @@ export function InvoiceEditForm({
     if (root) root.innerHTML = node.outerHTML;
   };
 
-  // Fetch products (dropdown list)
-  const { data: productsData } = useProducts({ limit: 200, search: "" });
-
-  const productOptions: DropdownOption[] = useMemo(() => {
-    const list = productsData?.data || [];
-    return list.map((p: any) => ({
-      _id: String(p._id),
-      title: String(p.title ?? ""),
-      price: typeof p.price === "number" ? p.price : Number(p.price || 0),
-      salePrice: p.salePrice != null ? Number(p.salePrice) : undefined,
-    }));
-  }, [productsData]);
-
   // Map invoice items to UI state
   const initialItems: LineItemUI[] = useMemo(() => {
     const src = invoice?.items || [];
@@ -242,7 +212,6 @@ export function InvoiceEditForm({
 
   const [items, setItems] = useState<LineItemUI[]>(initialItems);
 
-  // Keep items in sync if invoice prop changes (drawer reopen etc.)
   useEffect(() => {
     setItems(initialItems);
   }, [initialItems]);
@@ -260,7 +229,6 @@ export function InvoiceEditForm({
     defaultValues: {
       invoiceNo: invoice.invoiceNo,
       invoiceDate: invoice.invoiceDate || new Date().toISOString(),
-      // Due date required + allow empty if missing
       dueDate: invoice.dueDate || "",
 
       clientName: invoice.clientName || "",
@@ -338,10 +306,7 @@ export function InvoiceEditForm({
     if (items.length === 0) return "Please add at least one item.";
     const invalid = items.some(
       (it) =>
-        !it.id?.trim() ||
-        !it.title.trim() ||
-        Number(it.quantity) <= 0 ||
-        Number(it.rate) < 0
+        !it.title.trim() || Number(it.quantity) <= 0 || Number(it.rate) < 0
     );
     if (invalid) return "Please fill item name and valid quantity/rate.";
     return null;
@@ -377,9 +342,8 @@ export function InvoiceEditForm({
     setIsSubmitting(true);
 
     try {
-      // IMPORTANT: match your invoiceItemSchema
       const payloadItems = items.map((it) => ({
-        _id: String(it.id), // REQUIRED STRING ID
+        _id: String(it.id),
         title: String(it.title),
         basePrice: Number(it.rate || 0),
         price: Number(it.rate || 0),
@@ -416,7 +380,6 @@ export function InvoiceEditForm({
         terms: data.terms,
       };
 
-      // ✅ Adjust this URL if your backend differs
       const res = await fetch(`/api/invoice/${invoice._id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -452,7 +415,6 @@ export function InvoiceEditForm({
 
   return (
     <div className="h-full overflow-y-auto px-2 md:px-4 pb-6">
-      {/* Top Bar */}
       <SheetHeader className="mb-4">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
@@ -473,16 +435,14 @@ export function InvoiceEditForm({
               type="button"
               variant="outline"
               className="hidden sm:inline-flex"
-              onClick={() => setShowPreview((v) => !v)}
-            >
+              onClick={() => setShowPreview((v) => !v)}>
               {showPreview ? "Hide Preview" : "Show Preview"}
             </Button>
 
             <Button
               type="submit"
               onClick={handleSubmit(onSubmit)}
-              disabled={isSubmitting}
-            >
+              disabled={isSubmitting}>
               {isSubmitting ? "Updating…" : "Update Invoice"}
             </Button>
           </div>
@@ -490,7 +450,6 @@ export function InvoiceEditForm({
       </SheetHeader>
 
       <form onSubmit={handleSubmit(onSubmit)}>
-        {/* API errors block */}
         {apiErrors.length > 0 && (
           <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm mb-4">
             <ul className="list-disc pl-5 space-y-1 text-red-700">
@@ -510,18 +469,15 @@ export function InvoiceEditForm({
           className={cn(
             "grid gap-4",
             showPreview ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-1"
-          )}
-        >
+          )}>
           {/* LEFT */}
           <div className="space-y-4">
-            {/* Invoice details */}
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-base">Invoice details</CardTitle>
               </CardHeader>
 
               <CardContent className="space-y-4">
-                {/* Bill to */}
                 <div className="space-y-2">
                   <Label className="text-sm">Bill to</Label>
 
@@ -529,8 +485,7 @@ export function InvoiceEditForm({
                     <div>
                       <Label
                         htmlFor="clientName"
-                        className="text-xs text-muted-foreground"
-                      >
+                        className="text-xs text-muted-foreground">
                         Client name <span className="text-red-500">*</span>
                       </Label>
                       <Input
@@ -553,8 +508,7 @@ export function InvoiceEditForm({
                     <div>
                       <Label
                         htmlFor="clientEmail"
-                        className="text-xs text-muted-foreground"
-                      >
+                        className="text-xs text-muted-foreground">
                         Email
                       </Label>
                       <Input
@@ -568,8 +522,7 @@ export function InvoiceEditForm({
                     <div>
                       <Label
                         htmlFor="clientMobile"
-                        className="text-xs text-muted-foreground"
-                      >
+                        className="text-xs text-muted-foreground">
                         Phone <span className="text-red-500">*</span>
                       </Label>
                       <Input
@@ -592,8 +545,7 @@ export function InvoiceEditForm({
                     <div>
                       <Label
                         htmlFor="clientCity"
-                        className="text-xs text-muted-foreground"
-                      >
+                        className="text-xs text-muted-foreground">
                         City
                       </Label>
                       <Input
@@ -605,7 +557,6 @@ export function InvoiceEditForm({
                   </div>
                 </div>
 
-                {/* Invoice no + dates */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
                     <Label htmlFor="invoiceNo" className="text-sm">
@@ -622,8 +573,7 @@ export function InvoiceEditForm({
                   <div>
                     <Label
                       htmlFor="dueDate"
-                      className="text-sm flex items-center gap-2"
-                    >
+                      className="text-sm flex items-center gap-2">
                       <CalendarClock className="h-4 w-4" />
                       Due date <span className="text-red-500">*</span>
                     </Label>
@@ -645,7 +595,9 @@ export function InvoiceEditForm({
                           clearErrors("dueDate" as any);
                         }
                       }}
-                      className={cn((errors as any).dueDate && "border-red-500")}
+                      className={cn(
+                        (errors as any).dueDate && "border-red-500"
+                      )}
                     />
                     {(errors as any).dueDate && (
                       <p className="text-xs text-red-500 mt-1">
@@ -658,8 +610,7 @@ export function InvoiceEditForm({
                 <div>
                   <Label
                     htmlFor="invoiceDate"
-                    className="text-sm flex items-center gap-2"
-                  >
+                    className="text-sm flex items-center gap-2">
                     <CalendarClock className="h-4 w-4" />
                     Invoice date
                   </Label>
@@ -696,7 +647,6 @@ export function InvoiceEditForm({
                   )}
                 </div>
 
-                {/* Status + payment */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
                     <Label className="text-sm">Status</Label>
@@ -706,8 +656,7 @@ export function InvoiceEditForm({
                       render={({ field }) => (
                         <Select
                           onValueChange={field.onChange}
-                          defaultValue={field.value as any}
-                        >
+                          defaultValue={field.value as any}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select status" />
                           </SelectTrigger>
@@ -730,8 +679,7 @@ export function InvoiceEditForm({
                       render={({ field }) => (
                         <Select
                           onValueChange={field.onChange}
-                          defaultValue={field.value as any}
-                        >
+                          defaultValue={field.value as any}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select payment status" />
                           </SelectTrigger>
@@ -748,11 +696,14 @@ export function InvoiceEditForm({
               </CardContent>
             </Card>
 
-            {/* Invoice items */}
             <Card>
               <CardHeader className="pb-2 flex flex-row items-center justify-between">
                 <CardTitle className="text-base">Invoice items</CardTitle>
-                <Button type="button" variant="outline" size="sm" onClick={addItem}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addItem}>
                   <Plus className="h-4 w-4 mr-2" />
                   Add item
                 </Button>
@@ -760,30 +711,23 @@ export function InvoiceEditForm({
 
               <CardContent>
                 <div className="grid grid-cols-12 gap-2 text-xs text-muted-foreground mb-2">
-                  <div className="col-span-6 flex items-center gap-2">
-                    <span>Items</span>
-                    <span className="inline-flex items-center gap-1 text-[11px]">
-                      <ChevronsUpDown className="h-3 w-3" /> searchable
-                    </span>
-                  </div>
+                  <div className="col-span-6">Items</div>
                   <div className="col-span-2 text-right">QTY</div>
                   <div className="col-span-2 text-right">Rate</div>
                 </div>
 
                 <div className="space-y-2">
                   {items.map((it) => (
-                    <div key={it.id} className="grid grid-cols-12 gap-2 items-center">
+                    <div
+                      key={it.id}
+                      className="grid grid-cols-12 gap-2 items-center">
                       <div className="col-span-6">
-                        <SearchableDropdownWithCustom
-                          options={productOptions}
+                        <Input
                           value={it.title}
-                          onChange={(title, meta) => {
-                            updateItem(it.id, {
-                              title,
-                              rate: meta?.price ?? it.rate,
-                            });
-                          }}
-                          placeholder="Select product or type…"
+                          onChange={(e) =>
+                            updateItem(it.id, { title: e.target.value })
+                          }
+                          placeholder="Item name (type anything)"
                         />
                       </div>
 
@@ -808,7 +752,9 @@ export function InvoiceEditForm({
                           step="0.01"
                           value={it.rate}
                           onChange={(e) =>
-                            updateItem(it.id, { rate: Number(e.target.value || 0) })
+                            updateItem(it.id, {
+                              rate: Number(e.target.value || 0),
+                            })
                           }
                           className="text-right"
                         />
@@ -820,8 +766,7 @@ export function InvoiceEditForm({
                           variant="ghost"
                           size="icon"
                           onClick={() => removeItem(it.id)}
-                          className="text-red-500 hover:text-red-600"
-                        >
+                          className="text-red-500 hover:text-red-600">
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
@@ -829,30 +774,52 @@ export function InvoiceEditForm({
                   ))}
                 </div>
 
-                {/* notes/terms + totals box */}
                 <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
                     <Label className="text-sm">Notes</Label>
-                    <Textarea rows={3} placeholder="Any notes..." {...register("notes")} />
+                    <Textarea
+                      rows={3}
+                      placeholder="Any notes..."
+                      {...register("notes")}
+                    />
                   </div>
                   <div>
                     <Label className="text-sm">Terms</Label>
-                    <Textarea rows={3} placeholder="Payment terms..." {...register("terms")} />
+                    <Textarea
+                      rows={3}
+                      placeholder="Payment terms..."
+                      {...register("terms")}
+                    />
                   </div>
                 </div>
 
                 <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div>
                     <Label className="text-sm">Discount (৳)</Label>
-                    <Input type="number" min={0} step="0.01" {...register("discount", { valueAsNumber: true })} />
+                    <Input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      {...register("discount", { valueAsNumber: true })}
+                    />
                   </div>
                   <div>
                     <Label className="text-sm">Tax (৳)</Label>
-                    <Input type="number" min={0} step="0.01" {...register("tax", { valueAsNumber: true })} />
+                    <Input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      {...register("tax", { valueAsNumber: true })}
+                    />
                   </div>
                   <div>
                     <Label className="text-sm">Paid (৳)</Label>
-                    <Input type="number" min={0} step="0.01" {...register("paid", { valueAsNumber: true })} />
+                    <Input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      {...register("paid", { valueAsNumber: true })}
+                    />
                   </div>
                 </div>
 
@@ -877,8 +844,10 @@ export function InvoiceEditForm({
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Due</span>
                     <span
-                      className={cn("font-bold", due > 0 ? "text-red-600" : "text-emerald-600")}
-                    >
+                      className={cn(
+                        "font-bold",
+                        due > 0 ? "text-red-600" : "text-emerald-600"
+                      )}>
                       {formatMoney(due)}
                     </span>
                   </div>
@@ -886,7 +855,6 @@ export function InvoiceEditForm({
               </CardContent>
             </Card>
 
-            {/* Mobile save */}
             <div className="lg:hidden">
               <Button type="submit" className="w-full" disabled={isSubmitting}>
                 {isSubmitting ? "Updating…" : "Update Invoice"}
@@ -904,8 +872,7 @@ export function InvoiceEditForm({
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={handlePrintPreviewOnly}
-                >
+                  onClick={handlePrintPreviewOnly}>
                   <Printer className="h-4 w-4 mr-2" />
                   Print
                 </Button>
@@ -913,12 +880,9 @@ export function InvoiceEditForm({
 
               <Card className="sticky top-3">
                 <CardContent className="p-4">
-                  {/* Printable root */}
                   <div
                     ref={previewPrintRef}
-                    className="rounded-2xl border p-5 bg-card"
-                  >
-                    {/* Header row */}
+                    className="rounded-2xl border p-5 bg-card">
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <div className="text-2xl font-bold">Invoice</div>
@@ -930,19 +894,19 @@ export function InvoiceEditForm({
                         </div>
                       </div>
 
-                      {/* Invoice date on top-right */}
                       <div className="text-right">
                         <div className="text-xs text-muted-foreground flex items-center justify-end gap-1">
                           <CalendarClock className="h-3.5 w-3.5" />
                           Invoice date
                         </div>
                         <div className="text-sm font-semibold">
-                          {invoiceDateISO ? new Date(invoiceDateISO).toLocaleDateString() : "—"}
+                          {invoiceDateISO
+                            ? new Date(invoiceDateISO).toLocaleDateString()
+                            : "—"}
                         </div>
                       </div>
                     </div>
 
-                    {/* Bill/ Due block */}
                     <div className="mt-5 grid grid-cols-2 gap-3 rounded-xl border">
                       <div className="p-3">
                         <div className="text-xs text-muted-foreground">
@@ -966,7 +930,9 @@ export function InvoiceEditForm({
                           Due date
                         </div>
                         <div className="mt-1 font-semibold">
-                          {dueDateISO ? new Date(dueDateISO).toLocaleDateString() : "—"}
+                          {dueDateISO
+                            ? new Date(dueDateISO).toLocaleDateString()
+                            : "—"}
                         </div>
                       </div>
 
@@ -985,7 +951,6 @@ export function InvoiceEditForm({
                       </div>
                     </div>
 
-                    {/* Items */}
                     <div className="mt-5 rounded-xl border overflow-hidden">
                       <div className="grid grid-cols-12 bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
                         <div className="col-span-6">Items</div>
@@ -998,16 +963,13 @@ export function InvoiceEditForm({
                         {items.map((it) => (
                           <div
                             key={it.id}
-                            className="grid grid-cols-12 px-3 py-2 text-sm"
-                          >
+                            className="grid grid-cols-12 px-3 py-2 text-sm">
                             <div className="col-span-6 font-medium">
                               {it.title || "—"}
                             </div>
                             <div className="col-span-2 text-right">
                               {it.quantity}
                             </div>
-
-                            {/* No decimals */}
                             <div className="col-span-2 text-right">
                               {Math.round(it.rate)}
                             </div>
@@ -1019,7 +981,6 @@ export function InvoiceEditForm({
                       </div>
                     </div>
 
-                    {/* Summary */}
                     <div className="mt-5 flex justify-end">
                       <div className="w-full sm:w-72 rounded-xl border p-3 space-y-2">
                         <div className="flex justify-between text-sm">
@@ -1063,15 +1024,13 @@ export function InvoiceEditForm({
                             className={cn(
                               "font-bold",
                               due > 0 ? "text-red-600" : "text-emerald-600"
-                            )}
-                          >
+                            )}>
                             {formatMoney(due)}
                           </span>
                         </div>
                       </div>
                     </div>
 
-                    {/* Status badges */}
                     <div className="mt-4 flex flex-wrap gap-2">
                       <Badge variant="secondary" className="capitalize">
                         {watch("status") || "draft"}
@@ -1084,13 +1043,11 @@ export function InvoiceEditForm({
                             ? "secondary"
                             : "default"
                         }
-                        className="capitalize"
-                      >
+                        className="capitalize">
                         {watch("paymentStatus") || "unpaid"}
                       </Badge>
                     </div>
 
-                    {/* Notes & Terms bottom */}
                     {(notes || terms) && (
                       <div className="mt-6 space-y-3">
                         {notes && (
