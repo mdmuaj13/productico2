@@ -20,7 +20,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Command,
   CommandEmpty,
@@ -78,6 +82,7 @@ type WarehouseItem = {
 
 type LineItemUI = {
   id: string;
+  customObjectId?: string;
 
   // if selected from product list:
   productId: string | null;
@@ -98,7 +103,7 @@ type LineItemUI = {
 };
 
 function uid() {
-  return `li-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  return `${Date.now()}${Math.random().toString(4).slice(2)}`;
 }
 
 function toISOFromLocalInput(localValue: string) {
@@ -173,8 +178,7 @@ function SearchableProductWithCustom({
             "h-10 w-full rounded-md border px-3 text-left text-sm flex items-center justify-between",
             "bg-background hover:bg-accent/30",
             disabled && "opacity-60 cursor-not-allowed"
-          )}
-        >
+          )}>
           <span className={cn("truncate", !value && "text-muted-foreground")}>
             {value ? value : placeholder}
           </span>
@@ -182,7 +186,12 @@ function SearchableProductWithCustom({
         </button>
       </PopoverTrigger>
 
-      <PopoverContent className="w-[420px] p-0" align="start">
+      <PopoverContent
+        className="w-105 p-0 max-h-90 overflow-hidden"
+        align="start"
+        side="bottom"
+        sideOffset={8}
+        avoidCollisions={false}>
         <Command>
           <CommandInput
             placeholder="Search product…"
@@ -194,7 +203,7 @@ function SearchableProductWithCustom({
             No products found
           </CommandEmpty>
 
-          <CommandGroup heading="Products">
+          <CommandGroup heading="Products" className="max-h-60 overflow-y-auto">
             {filtered.slice(0, 50).map((o) => (
               <CommandItem
                 key={o._id}
@@ -203,8 +212,7 @@ function SearchableProductWithCustom({
                   onChange(o.title, o);
                   setOpen(false);
                 }}
-                className="flex items-center justify-between"
-              >
+                className="flex items-center justify-between">
                 <div className="min-w-0">
                   <div className="truncate">{o.title}</div>
                   <div className="text-xs text-muted-foreground">
@@ -230,8 +238,7 @@ function SearchableProductWithCustom({
                 if (!title) return;
                 onChange(title, null); // custom
                 setOpen(false);
-              }}
-            >
+              }}>
               <Plus className="h-4 w-4 mr-2" />
               Use “{query.trim() || "…"}” as new item
             </Button>
@@ -369,7 +376,16 @@ export function OrderForm({ onSuccess }: OrderFormProps) {
     return null;
   };
 
-  const handleProductChange = (rowId: string, title: string, meta?: ProductOption | null) => {
+  function makeObjectIdHex24() {
+    const bytes = crypto.getRandomValues(new Uint8Array(12)); // 12 bytes => 24 hex chars
+    return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+  }
+
+  const handleProductChange = (
+    rowId: string,
+    title: string,
+    meta?: ProductOption | null
+  ) => {
     // Custom item (meta null/undefined)
     if (!meta?._id) {
       updateItem(rowId, {
@@ -380,6 +396,7 @@ export function OrderForm({ onSuccess }: OrderFormProps) {
         variantName: null,
         warehouseId: null,
         rate: 0, // custom starts at 0 like invoice create
+        customObjectId: makeObjectIdHex24(),
       });
       return;
     }
@@ -433,7 +450,10 @@ export function OrderForm({ onSuccess }: OrderFormProps) {
           rate: nextRate, // auto update rate when variant changes
         };
 
-        next.amount = Math.max(Number(next.quantity || 0) * Number(next.rate || 0), 0);
+        next.amount = Math.max(
+          Number(next.quantity || 0) * Number(next.rate || 0),
+          0
+        );
         return next;
       })
     );
@@ -450,13 +470,12 @@ export function OrderForm({ onSuccess }: OrderFormProps) {
 
     try {
       const productsWithWarehouse = items.map((it) => {
-        const product = it.productId ? findProduct(it.productId) : null;
-
-        // For custom items, we still send a stable _id-like string to keep backend happy.
-        const stableId = it.productId ? it.productId : `custom-${it.id}`;
+        const mongoId = it.productId
+          ? String(it.productId) // real product ObjectId
+          : String(it.customObjectId || makeObjectIdHex24()); // For custom items, we still send a stable _id-like string to keep backend happy.
 
         return {
-          _id: stableId,
+          _id: mongoId,
           slug: it.productSlug || "",
           title: it.title,
           thumbnail: it.thumbnail,
@@ -466,8 +485,10 @@ export function OrderForm({ onSuccess }: OrderFormProps) {
           quantity: Number(it.quantity || 1),
 
           variantName: it.productId ? it.variantName : null,
-          variantPrice: it.productId && it.variantName ? Number(it.rate || 0) : null,
-          variantSalePrice: it.productId && it.variantName ? Number(it.rate || 0) : null,
+          variantPrice:
+            it.productId && it.variantName ? Number(it.rate || 0) : null,
+          variantSalePrice:
+            it.productId && it.variantName ? Number(it.rate || 0) : null,
 
           warehouseId: it.productId ? it.warehouseId : null,
           lineTotal: Number(it.amount || 0),
@@ -503,12 +524,14 @@ export function OrderForm({ onSuccess }: OrderFormProps) {
       });
 
       const result = await response.json();
-      if (!response.ok) throw new Error(result?.error || "Failed to create order");
+      if (!response.ok)
+        throw new Error(result?.error || "Failed to create order");
 
       toast.success("Order created successfully");
       onSuccess();
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : "Failed to create order";
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to create order";
       toast.error(errorMessage);
       console.error(error);
     } finally {
@@ -532,7 +555,9 @@ export function OrderForm({ onSuccess }: OrderFormProps) {
             <CardHeader>
               <div className="flex items-center gap-2">
                 <User className="h-4 w-4" />
-                <CardTitle className="text-base">Customer Information</CardTitle>
+                <CardTitle className="text-base">
+                  Customer Information
+                </CardTitle>
               </div>
             </CardHeader>
             <CardContent className="p-2">
@@ -650,8 +675,7 @@ export function OrderForm({ onSuccess }: OrderFormProps) {
                 <div>
                   <Label
                     htmlFor="order_date"
-                    className="text-sm flex items-center gap-2"
-                  >
+                    className="text-sm flex items-center gap-2">
                     <Clock className="h-4 w-4" />
                     Order Date &amp; Time
                   </Label>
@@ -680,14 +704,15 @@ export function OrderForm({ onSuccess }: OrderFormProps) {
                       render={({ field }) => (
                         <Select
                           onValueChange={field.onChange}
-                          defaultValue={field.value}
-                        >
+                          defaultValue={field.value}>
                           <SelectTrigger>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="pending">Pending</SelectItem>
-                            <SelectItem value="processing">Processing</SelectItem>
+                            <SelectItem value="processing">
+                              Processing
+                            </SelectItem>
                             <SelectItem value="confirmed">Confirmed</SelectItem>
                             <SelectItem value="shipped">Shipped</SelectItem>
                             <SelectItem value="delivered">Delivered</SelectItem>
@@ -708,8 +733,7 @@ export function OrderForm({ onSuccess }: OrderFormProps) {
                       render={({ field }) => (
                         <Select
                           onValueChange={field.onChange}
-                          defaultValue={field.value}
-                        >
+                          defaultValue={field.value}>
                           <SelectTrigger>
                             <SelectValue />
                           </SelectTrigger>
@@ -742,223 +766,237 @@ export function OrderForm({ onSuccess }: OrderFormProps) {
 
         {/* ✅ ITEM ADDING SECTION — SAME STYLE AS INVOICE CREATE */}
         {/* ✅ ITEM ADDING SECTION — Compact & beautiful (flex, responsive) */}
-<Card>
-  <CardHeader className="pb-2 flex flex-row items-center justify-between">
-    <CardTitle className="text-base">Order items</CardTitle>
-    <Button type="button" variant="outline" size="sm" onClick={addItem}>
-      <Plus className="h-4 w-4 mr-2" />
-      Add item
-    </Button>
-  </CardHeader>
+        <Card>
+          <CardHeader className="pb-2 flex flex-row items-center justify-between">
+            <CardTitle className="text-base">Order items</CardTitle>
+            <Button type="button" variant="outline" size="sm" onClick={addItem}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add item
+            </Button>
+          </CardHeader>
 
-  <CardContent className="space-y-3">
-    {/* Header (desktop only) */}
-    <div className="hidden lg:flex gap-2 text-xs text-muted-foreground px-1">
-      <div className="flex-[2.2] flex items-center gap-2">
-        <span>Product</span>
-        <span className="inline-flex items-center gap-1 text-[11px]">
-          <ChevronsUpDown className="h-3 w-3" /> searchable
-        </span>
-      </div>
-      <div className="flex-1">Variant</div>
-      <div className="flex-1">Warehouse</div>
-      <div className="w-20 text-right">QTY</div>
-      <div className="w-24 text-right">Rate</div>
-      <div className="w-10" />
-    </div>
-
-    <div className="space-y-2">
-      {items.map((it) => {
-        const product = it.productId ? findProduct(it.productId) : null;
-        const hasProduct = !!product;
-
-        return (
-          <div
-            key={it.id}
-            className={cn(
-              "rounded-xl border p-2.5",
-              "hover:bg-accent/20 transition-colors"
-            )}
-          >
-            {/* Row 1: controls */}
-            <div className="flex flex-col lg:flex-row gap-2">
-              {/* Product */}
-              <div className="flex-[2.2] min-w-0">
-                <Label className="lg:hidden text-xs text-muted-foreground mb-1 block">
-                  Product
-                </Label>
-
-                <SearchableProductWithCustom
-                  options={productOptions}
-                  value={it.title}
-                  onChange={(title, meta) =>
-                    handleProductChange(it.id, title, meta)
-                  }
-                  placeholder="Select product or type…"
-                />
-
-                {/* small helper badges */}
-                <div className="mt-1 flex flex-wrap gap-2">
-                  {hasProduct ? (
-                    <>
-                      <Badge variant="secondary" className="text-[11px]">
-                        Unit: ৳{Math.round(it.rate)}
-                      </Badge>
-                      {product?.variants?.length ? (
-                        <Badge variant="outline" className="text-[11px]">
-                          {product.variants.length} variants
-                        </Badge>
-                      ) : null}
-                    </>
-                  ) : it.title.trim() ? (
-                    <Badge variant="outline" className="text-[11px]">
-                      Custom item
-                    </Badge>
-                  ) : null}
-                </div>
+          <CardContent className="space-y-3">
+            {/* Header (desktop only) */}
+            <div className="hidden lg:flex gap-2 text-xs text-muted-foreground px-1">
+              <div className="flex-[2.2] flex items-center gap-2">
+                <span>Product</span>
+                <span className="inline-flex items-center gap-1 text-[11px]">
+                  <ChevronsUpDown className="h-3 w-3" /> searchable
+                </span>
               </div>
-
-              {/* Variant */}
-              <div className="flex-1 min-w-[160px]">
-                <Label className="lg:hidden text-xs text-muted-foreground mb-1 block">
-                  Variant
-                </Label>
-
-                <Select
-                  value={it.variantName ? it.variantName : "base"}
-                  onValueChange={(v) => handleVariantChange(it.id, v)}
-                  disabled={!hasProduct}
-                >
-                  <SelectTrigger className={cn("h-10", !hasProduct && "opacity-60")}>
-                    <div className="flex items-center gap-2 min-w-0">
-                      <Layers3 className="h-4 w-4 text-muted-foreground shrink-0" />
-                      <SelectValue placeholder="Variant" />
-                    </div>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="base">Base</SelectItem>
-                    {(product?.variants || []).map((v) => (
-                      <SelectItem key={v.name} value={v.name}>
-                        {v.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Warehouse */}
-              <div className="flex-1 min-w-[180px]">
-                <Label className="lg:hidden text-xs text-muted-foreground mb-1 block">
-                  Warehouse
-                </Label>
-
-                <Select
-                  value={it.warehouseId ?? NONE}
-                  onValueChange={(v) =>
-                    updateItem(it.id, { warehouseId: v === NONE ? null : v })
-                  }
-                  disabled={!hasProduct}
-                >
-                  <SelectTrigger className={cn("h-10", !hasProduct && "opacity-60")}>
-                    <div className="flex items-center gap-2 min-w-0">
-                      <WarehouseIcon className="h-4 w-4 text-muted-foreground shrink-0" />
-                      <SelectValue placeholder="Warehouse" />
-                    </div>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={NONE}>No warehouse</SelectItem>
-                    {warehouses.map((w) => (
-                      <SelectItem key={w._id} value={w._id}>
-                        {w.title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Qty + Rate + Remove */}
-              <div className="flex justify-between lg:justify-end gap-2">
-                <div className="w-20">
-                  <Label className="lg:hidden text-xs text-muted-foreground mb-1 block">
-                    QTY
-                  </Label>
-                  <Input
-                    type="number"
-                    min={1}
-                    value={it.quantity}
-                    onChange={(e) =>
-                      updateItem(it.id, {
-                        quantity: Number(e.target.value || 1),
-                      })
-                    }
-                    className="h-10 text-right"
-                  />
-                </div>
-
-                <div className="w-24">
-                  <Label className="lg:hidden text-xs text-muted-foreground mb-1 block">
-                    Rate
-                  </Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    value={it.rate}
-                    onChange={(e) =>
-                      updateItem(it.id, { rate: Number(e.target.value || 0) })
-                    }
-                    className="h-10 text-right"
-                  />
-                </div>
-
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => removeItem(it.id)}
-                  className="h-10 w-10 text-red-500 hover:text-red-600"
-                  aria-label="Remove item"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
+              <div className="flex-1">Variant</div>
+              <div className="flex-1">Warehouse</div>
+              <div className="w-20 text-right">QTY</div>
+              <div className="w-24 text-right">Rate</div>
+              <div className="w-10" />
             </div>
 
-            {/* Row 2: compact totals */}
-            <div className="mt-2 flex items-center justify-between px-1">
-              <div className="text-xs text-muted-foreground">
-                {hasProduct ? (
-                  <>
-                    {it.variantName ? (
-                      <span>Variant: <span className="text-foreground">{it.variantName}</span></span>
-                    ) : (
-                      <span>Base product</span>
-                    )}
-                    {it.warehouseId ? (
-                      <span className="ml-2">• Warehouse selected</span>
-                    ) : (
-                      <span className="ml-2">• No warehouse</span>
-                    )}
-                  </>
-                ) : it.title.trim() ? (
-                  <span>Custom item — set rate manually</span>
-                ) : (
-                  <span>Pick product or type custom</span>
-                )}
-              </div>
+            <div className="space-y-2">
+              {items.map((it) => {
+                const product = it.productId ? findProduct(it.productId) : null;
+                const hasProduct = !!product;
 
-              <div className="text-xs">
-                <span className="text-muted-foreground">Line total: </span>
-                <span className="font-semibold">{formatMoney(it.amount)}</span>
-              </div>
+                return (
+                  <div
+                    key={it.id}
+                    className={cn(
+                      "rounded-xl border p-2.5",
+                      "hover:bg-accent/20 transition-colors"
+                    )}>
+                    {/* Row 1: controls */}
+                    <div className="flex flex-col lg:flex-row gap-2">
+                      {/* Product */}
+                      <div className="flex-[2.2] min-w-0">
+                        <Label className="lg:hidden text-xs text-muted-foreground mb-1 block">
+                          Product
+                        </Label>
+
+                        <SearchableProductWithCustom
+                          options={productOptions}
+                          value={it.title}
+                          onChange={(title, meta) =>
+                            handleProductChange(it.id, title, meta)
+                          }
+                          placeholder="Select product or type…"
+                        />
+
+                        {/* small helper badges */}
+                        <div className="mt-1 flex flex-wrap gap-2">
+                          {hasProduct ? (
+                            <>
+                              <Badge
+                                variant="secondary"
+                                className="text-[11px]">
+                                Unit: ৳{Math.round(it.rate)}
+                              </Badge>
+                              {product?.variants?.length ? (
+                                <Badge
+                                  variant="outline"
+                                  className="text-[11px]">
+                                  {product.variants.length} variants
+                                </Badge>
+                              ) : null}
+                            </>
+                          ) : it.title.trim() ? (
+                            <Badge variant="outline" className="text-[11px]">
+                              Custom item
+                            </Badge>
+                          ) : null}
+                        </div>
+                      </div>
+
+                      {/* Variant */}
+                      <div className="flex-1 min-w-[160px]">
+                        <Label className="lg:hidden text-xs text-muted-foreground mb-1 block">
+                          Variant
+                        </Label>
+
+                        <Select
+                          value={it.variantName ? it.variantName : "base"}
+                          onValueChange={(v) => handleVariantChange(it.id, v)}
+                          disabled={!hasProduct}>
+                          <SelectTrigger
+                            className={cn("h-10", !hasProduct && "opacity-60")}>
+                            <div className="flex items-center gap-2 min-w-0">
+                              <Layers3 className="h-4 w-4 text-muted-foreground shrink-0" />
+                              <SelectValue placeholder="Variant" />
+                            </div>
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="base">Base</SelectItem>
+                            {(product?.variants || []).map((v) => (
+                              <SelectItem key={v.name} value={v.name}>
+                                {v.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Warehouse */}
+                      <div className="flex-1 min-w-[180px]">
+                        <Label className="lg:hidden text-xs text-muted-foreground mb-1 block">
+                          Warehouse
+                        </Label>
+
+                        <Select
+                          value={it.warehouseId ?? NONE}
+                          onValueChange={(v) =>
+                            updateItem(it.id, {
+                              warehouseId: v === NONE ? null : v,
+                            })
+                          }
+                          disabled={!hasProduct}>
+                          <SelectTrigger
+                            className={cn("h-10", !hasProduct && "opacity-60")}>
+                            <div className="flex items-center gap-2 min-w-0">
+                              <WarehouseIcon className="h-4 w-4 text-muted-foreground shrink-0" />
+                              <SelectValue placeholder="Warehouse" />
+                            </div>
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value={NONE}>No warehouse</SelectItem>
+                            {warehouses.map((w) => (
+                              <SelectItem key={w._id} value={w._id}>
+                                {w.title}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Qty + Rate + Remove */}
+                      <div className="flex justify-between lg:justify-end gap-2">
+                        <div className="w-20">
+                          <Label className="lg:hidden text-xs text-muted-foreground mb-1 block">
+                            QTY
+                          </Label>
+                          <Input
+                            type="number"
+                            min={1}
+                            value={it.quantity}
+                            onChange={(e) =>
+                              updateItem(it.id, {
+                                quantity: Number(e.target.value || 1),
+                              })
+                            }
+                            className="h-10 text-right"
+                          />
+                        </div>
+
+                        <div className="w-24">
+                          <Label className="lg:hidden text-xs text-muted-foreground mb-1 block">
+                            Rate
+                          </Label>
+                          <Input
+                            type="number"
+                            min={0}
+                            step="0.01"
+                            value={it.rate}
+                            onChange={(e) =>
+                              updateItem(it.id, {
+                                rate: Number(e.target.value || 0),
+                              })
+                            }
+                            className="h-10 text-right"
+                          />
+                        </div>
+
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeItem(it.id)}
+                          className="h-10 w-10 text-red-500 hover:text-red-600"
+                          aria-label="Remove item">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Row 2: compact totals */}
+                    <div className="mt-2 flex items-center justify-between px-1">
+                      <div className="text-xs text-muted-foreground">
+                        {hasProduct ? (
+                          <>
+                            {it.variantName ? (
+                              <span>
+                                Variant:{" "}
+                                <span className="text-foreground">
+                                  {it.variantName}
+                                </span>
+                              </span>
+                            ) : (
+                              <span>Base product</span>
+                            )}
+                            {it.warehouseId ? (
+                              <span className="ml-2">• Warehouse selected</span>
+                            ) : (
+                              <span className="ml-2">• No warehouse</span>
+                            )}
+                          </>
+                        ) : it.title.trim() ? (
+                          <span>Custom item — set rate manually</span>
+                        ) : (
+                          <span>Pick product or type custom</span>
+                        )}
+                      </div>
+
+                      <div className="text-xs">
+                        <span className="text-muted-foreground">
+                          Line total:{" "}
+                        </span>
+                        <span className="font-semibold">
+                          {formatMoney(it.amount)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          </div>
-        );
-      })}
-    </div>
-  </CardContent>
-</Card>
-
+          </CardContent>
+        </Card>
 
         {/* Financial Summary */}
         <Card>
@@ -1037,8 +1075,7 @@ export function OrderForm({ onSuccess }: OrderFormProps) {
                       : dueAmount === 0
                       ? "text-green-600"
                       : "text-blue-600"
-                  )}
-                >
+                  )}>
                   ৳{dueAmount.toFixed(2)}
                 </span>
               </div>
@@ -1053,8 +1090,7 @@ export function OrderForm({ onSuccess }: OrderFormProps) {
             disabled={isSubmitting || items.length === 0}
             className="w-full"
             size="lg"
-            onClick={handleSubmit(onSubmit)}
-          >
+            onClick={handleSubmit(onSubmit)}>
             {isSubmitting ? (
               <span className="flex items-center justify-center">
                 Creating Order...
