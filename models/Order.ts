@@ -63,8 +63,7 @@ const OrderProductSchema = new Schema({
 	},
 }, { _id: false });
 
-const OrderSchema = new mongoose.Schema(
-	{
+const OrderSchema = new mongoose.Schema({
 		// Customer Information
 		customerName: {
 			type: String,
