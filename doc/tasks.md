@@ -56,6 +56,13 @@
 - [ ] `GET /api/orders/:id/invoice` - Generate invoice PDF
 - [ ] `GET /api/orders/:id/qr` - Generate QR tracking code
 
+
+### Invoice Management API
+- [ ] `GET /api/invoice` - List all invoices
+- [ ] `POST /api/invoice` - Create invoice
+- [ ] `PUT /api/invoice/:id` - Update invoice
+- [ ] `DELETE /api/invoice/:id` - Delete invoice
+
 ### Customer Management API
 - [ ] `GET /api/customers` - List all auto-generated customers
 - [ ] `GET /api/customers/:id` - Get customer details + order history
@@ -129,6 +136,15 @@
 - [ ] Orders list page (`/orders`) with advanced filters
 - [ ] Create order page (`/orders/create`)
 - [ ] Order details page (`/orders/[id]`)
+- [ ] Customer auto-creation form component
+- [ ] Invoice generation/preview component
+- [ ] QR code display component
+- [ ] Print functionality for invoices
+
+### Invoice Management Pages
+- [ ] invoice list page (`/invoice`) with advanced filters
+- [ ] Create invoice page (`/invoice/create`)
+- [ ] invoice details page (`/invoice/[id]`)
 - [ ] Customer auto-creation form component
 - [ ] Invoice generation/preview component
 - [ ] QR code display component
