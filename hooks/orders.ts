@@ -59,6 +59,8 @@ export const useOrders = (params?: {
 	search?: string;
 	status?: string;
 	paymentStatus?: string;
+	sortBy?: string;
+  	sortOrder?: "asc" | "desc";
 }) => {
 	const queryParams = new URLSearchParams();
 	if (params?.page) queryParams.set('page', params.page.toString());
@@ -66,6 +68,8 @@ export const useOrders = (params?: {
 	if (params?.search) queryParams.set('search', params.search);
 	if (params?.status) queryParams.set('status', params.status);
 	if (params?.paymentStatus) queryParams.set('paymentStatus', params.paymentStatus);
+	if (params?.sortBy) queryParams.set('sortBy', params.sortBy);
+	if (params?.sortOrder) queryParams.set('sortOrder', params.sortOrder);
 
 	const url = `/api/orders${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
 

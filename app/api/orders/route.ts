@@ -18,6 +18,8 @@ export async function GET(request: NextRequest) {
 		const search = searchParams.get('search') || '';
 		const status = searchParams.get('status') || '';
 		const paymentStatus = searchParams.get('paymentStatus') || '';
+		const sortBy = searchParams.get("sortBy") || "createdAt";
+		const sortOrder = searchParams.get("sortOrder") === "asc" ? 1 : -1;
 
 		const skip = (page - 1) * limit;
 
@@ -42,7 +44,7 @@ export async function GET(request: NextRequest) {
 
 		const [orders, total] = await Promise.all([
 			Order.find(query)
-				.sort({ createdAt: -1 })
+				.sort({ [sortBy]: sortOrder })
 				.skip(skip)
 				.limit(limit)
 				.populate('createdById', 'name email')
