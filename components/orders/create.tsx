@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 
 import { Button } from "@/components/ui/button";
@@ -39,7 +39,6 @@ import {
   User,
   ShoppingCart,
   Trash2,
-  Search,
   Clock,
   Warehouse as WarehouseIcon,
   Layers3,

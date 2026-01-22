@@ -104,6 +104,10 @@ export function CategoriesList() {
 	const total = meta?.total ?? 0;
 	const totalPages = meta?.totalPages ?? 1;
 
+	const isMidSize = useMediaQuery('(min-width: 640px) and (max-width: 1023px)');
+	const isMobile = useMediaQuery('(max-width: 639px)');
+	const sheetSide = isMobile || isMidSize ? 'bottom' : 'right';
+
 	const handleDeleteClick = (category: Category) => {
 		setDeletingCategory(category);
 		setDeleteDialogOpen(true);
@@ -235,10 +239,6 @@ export function CategoriesList() {
 			</Card>
 		);
 	}
-
-	const isMidSize = useMediaQuery('(min-width: 640px) and (max-width: 1023px)');
-	const isMobile = useMediaQuery('(max-width: 639px)');
-	const sheetSide = isMobile || isMidSize ? 'bottom' : 'right';
 
 	const hasActiveFilters = search || statusFilter !== 'all';
 

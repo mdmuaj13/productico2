@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { StatCard } from "@/components/ui/stat-card";
-import { Package, ShoppingCart, Calendar, Users } from "lucide-react";
 import { Spinner } from "@/components/ui/shadcn-io/spinner";
 import DashboardPage from "./dashboard/page";
 
