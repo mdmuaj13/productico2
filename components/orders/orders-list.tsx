@@ -85,21 +85,15 @@ export function OrdersList() {
 
   // Filters
   const [searchInput, setSearchInput] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [search, setSearch] = useState('');
 
   const [statusFilter, setStatusFilter] = useState<'all' | OrderType['status']>('all');
   const [paymentFilter, setPaymentFilter] = useState<'all' | OrderType['paymentStatus']>('all');
 
-  // debounce search
-  useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(searchInput.trim()), 400);
-    return () => clearTimeout(t);
-  }, [searchInput]);
-
   // reset to page 1 on any filter change
   useEffect(() => {
     setPage(1);
-  }, [debouncedSearch, statusFilter, paymentFilter, limit]);
+  }, [search, statusFilter, paymentFilter, limit]);
 
   const [createSheetOpen, setCreateSheetOpen] = useState(false);
   const [editSheetOpen, setEditSheetOpen] = useState(false);
@@ -116,7 +110,7 @@ export function OrdersList() {
   const { data: ordersData, error, mutate: mutateOrders } = useOrders({
     page,
     limit,
-    search: debouncedSearch,
+    search,
     status: statusFilter === 'all' ? '' : statusFilter,
     paymentStatus: paymentFilter === 'all' ? '' : paymentFilter,
     sortBy: 'createdAt',
@@ -280,14 +274,20 @@ export function OrdersList() {
     );
   }
 
-  const hasActiveFilters = searchInput || statusFilter !== 'all' || paymentFilter !== 'all';
+  const hasActiveFilters = search || statusFilter !== 'all' || paymentFilter !== 'all';
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setSearch(searchInput.trim());
+    setPage(1);
+  };
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold font-serif tracking-tight" style={{ fontFamily: "'Instrument Serif', serif" }}>
+          <h1 className="text-2xl font-bold font-serif tracking-tight">
             Orders
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
@@ -312,62 +312,76 @@ export function OrdersList() {
 
       {/* Filters Bar */}
       <div className="rounded-lg border bg-card p-4">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-6">
-          <div className="sm:col-span-2 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              placeholder="Search orders..."
-              className="pl-9"
-            />
-          </div>
-
-          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
-            <SelectTrigger className="h-10">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All status</SelectItem>
-              <SelectItem value="pending">Pending</SelectItem>
-              <SelectItem value="processing">Processing</SelectItem>
-              <SelectItem value="confirmed">Confirmed</SelectItem>
-              <SelectItem value="shipped">Shipped</SelectItem>
-              <SelectItem value="delivered">Delivered</SelectItem>
-              <SelectItem value="cancelled">Cancelled</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <Select value={paymentFilter} onValueChange={(v) => setPaymentFilter(v as any)}>
-            <SelectTrigger className="h-10">
-              <SelectValue placeholder="Payment" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All payment</SelectItem>
-              <SelectItem value="unpaid">Unpaid</SelectItem>
-              <SelectItem value="partial">Partial</SelectItem>
-              <SelectItem value="paid">Paid</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <div className="flex justify-end">
-            {hasActiveFilters && (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-6 sm:items-center">
+          <form onSubmit={handleSearchSubmit} className="sm:col-span-2">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder="Search orders..."
+                className="pl-9 pr-10"
+              />
               <Button
-                type="button"
+                type="submit"
                 variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setSearchInput('');
-                  setStatusFilter('all');
-                  setPaymentFilter('all');
-                  setLimit(10);
-                  setPage(1);
-                }}
-                className="text-muted-foreground"
+                size="icon"
+                className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8"
+                aria-label="Search"
               >
-                Clear filters
+                <ChevronRight className="h-4 w-4" />
               </Button>
-            )}
+            </div>
+          </form>
+
+          <div className="sm:col-span-4 flex flex-col sm:flex-row gap-3 sm:justify-end">
+            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
+              <SelectTrigger className="h-10 sm:w-44">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All status</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="processing">Processing</SelectItem>
+                <SelectItem value="confirmed">Confirmed</SelectItem>
+                <SelectItem value="shipped">Shipped</SelectItem>
+                <SelectItem value="delivered">Delivered</SelectItem>
+                <SelectItem value="cancelled">Cancelled</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={paymentFilter} onValueChange={(v) => setPaymentFilter(v as any)}>
+              <SelectTrigger className="h-10 sm:w-44">
+                <SelectValue placeholder="Payment" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All payment</SelectItem>
+                <SelectItem value="unpaid">Unpaid</SelectItem>
+                <SelectItem value="partial">Partial</SelectItem>
+                <SelectItem value="paid">Paid</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <div className="flex justify-end sm:ml-2">
+              {hasActiveFilters && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setSearchInput('');
+                    setSearch('');
+                    setStatusFilter('all');
+                    setPaymentFilter('all');
+                    setLimit(10);
+                    setPage(1);
+                  }}
+                  className="text-muted-foreground"
+                >
+                  Clear filters
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </div>
