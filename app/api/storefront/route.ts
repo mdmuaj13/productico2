@@ -10,8 +10,22 @@ export async function GET(request: NextRequest) {
 		await connectDB();
 
 		const searchParams = request.nextUrl.searchParams;
-		const type = searchParams.get('type') || 'default';
+		const type = searchParams.get('type');
 
+		// If type is 'all' or not specified, return all storefront data
+		if (!type || type === 'all') {
+			const storefronts = await Storefront.find({}).lean();
+			
+			// Convert array to object keyed by type for easier access
+			const storefrontMap = storefronts.reduce((acc, item) => {
+				acc[item.type] = item;
+				return acc;
+			}, {} as Record<string, typeof storefronts[0]>);
+
+			return ApiSerializer.success(storefrontMap, 'All storefronts retrieved successfully');
+		}
+
+		// Fetch specific type
 		const storefront = await Storefront.findOne({ type }).lean();
 
 		if (!storefront) {
