@@ -101,7 +101,7 @@ const data = {
 	],
 	documents: [
 		{
-			name: 'Public',
+			name: 'Storefront',
 			url: '/app/storefront',
 			icon: IconReport,
 		},
