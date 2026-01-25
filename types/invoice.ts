@@ -76,5 +76,4 @@ export interface Invoice {
  * Invoice Form Data
  * (used for create/update forms)
  * ========================= */
-export interface InvoiceFormData
-	extends Omit<Invoice, '_id' | 'createdAt' | 'updatedAt'> {}
+export type InvoiceFormData = Omit<Invoice, '_id' | 'createdAt' | 'updatedAt'>;

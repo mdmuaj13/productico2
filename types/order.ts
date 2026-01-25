@@ -42,4 +42,4 @@ export interface Order {
 	updatedAt?: string;
 }
 
-export interface OrderFormData extends Omit<Order, '_id' | 'createdAt' | 'updatedAt'> {}
+export type OrderFormData = Omit<Order, '_id' | 'createdAt' | 'updatedAt'>;
