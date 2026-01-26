@@ -1,11 +1,5 @@
 import type React from "react"
 import { Package, Layers, ShoppingCart, Users, Truck, Warehouse, AlertTriangle, FileText } from "lucide-react"
-import {
-  Card,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
 
 export interface DashboardStats {
   totalProducts: number
@@ -33,26 +27,63 @@ const StatCard = ({
   value,
   subtitle,
   icon: Icon,
+  index,
+  accent = 'hsl(var(--primary))',
 }: {
   title: string
   value: number | string
   subtitle?: string
   icon: React.ComponentType<{ className?: string }>
+  index: number
+  accent?: string
 }) => (
-  <Card className="@container/card">
-    <CardHeader>
-      <CardDescription className="flex items-center justify-between gap-3">
-        <span>{title}</span>
-        <Icon className="h-4 w-4 text-muted-foreground" />
-      </CardDescription>
-      <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-        {value}
-      </CardTitle>
-      {subtitle ? (
-        <CardDescription className="text-xs">{subtitle}</CardDescription>
-      ) : null}
-    </CardHeader>
-  </Card>
+  <div
+    className="group relative overflow-hidden rounded-lg border bg-card p-5 hover:shadow-md transition-all duration-300"
+    style={{
+      animation: 'fadeInUp 0.5s ease-out backwards',
+      animationDelay: `${index * 60}ms`
+    }}
+  >
+    {/* Decorative accent dot */}
+    <div
+     	className="absolute top-4 right-4 w-1.5 h-1.5 rounded-full opacity-60 group-hover:opacity-100 transition-opacity duration-300"
+     	style={{ backgroundColor: accent }}
+    />
+
+    {/* Icon container */}
+    <div className="flex items-start gap-3 mb-4">
+     	<div
+       	className="inline-flex p-2 rounded-md bg-muted"
+     	>
+       	<span style={{ color: accent, display: 'flex' }}>
+       		<Icon className="h-4 w-4" />
+       	</span>
+     	</div>
+     	<div className="text-xs font-medium text-muted-foreground/70 uppercase tracking-wider">
+       	{(index + 1).toString().padStart(2, '0')}
+     	</div>
+    </div>
+
+    {/* Value */}
+    <div
+     	className="text-3xl md:text-4xl font-bold text-foreground tracking-tight mb-1 tabular-nums"
+     	style={{ fontFamily: "'Instrument Serif', serif" }}
+    >
+     	{value}
+    </div>
+
+    {/* Title */}
+    <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1">
+     	{title}
+    </div>
+
+    {/* Subtitle */}
+    {subtitle && (
+     	<div className="text-xs text-muted-foreground/70 mt-2">
+     		{subtitle}
+     	</div>
+    )}
+  </div>
 )
 
 export function SectionCards({
@@ -74,56 +105,30 @@ export function SectionCards({
     lastOrderDate: null,
   }
 
+  const cardConfigs = [
+    { title: "Products", value: safeStats.totalProducts, subtitle: "Active in catalog", icon: Package, accent: "hsl(25 95% 53%)" },
+    { title: "Categories", value: safeStats.totalCategories, subtitle: "Active categories", icon: Layers, accent: "hsl(199 89% 48%)" },
+    { title: "Orders", value: safeStats.totalOrders, subtitle: `Last: ${formatDate(safeStats.lastOrderDate)}`, icon: ShoppingCart, accent: "hsl(142 76% 36%)" },
+    { title: "Customers", value: safeStats.totalCustomers, subtitle: "Unique by mobile", icon: Users, accent: "hsl(38 92% 50%)" },
+    { title: "Vendors", value: safeStats.totalVendors, subtitle: "Active vendors", icon: Truck, accent: "hsl(262 83% 58%)" },
+    { title: "Warehouses", value: safeStats.totalWarehouses, subtitle: "Storage locations", icon: Warehouse, accent: "hsl(174 72% 56%)" },
+    { title: "Pending POs", value: safeStats.pendingPurchaseOrders, subtitle: "Awaiting approval", icon: FileText, accent: "hsl(330 81% 60%)" },
+    { title: "Low Stock", value: safeStats.lowStockItems, subtitle: "At reorder point", icon: AlertTriangle, accent: "hsl(15 90% 60%)" },
+  ]
+
   return (
-    <div className="*:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card grid grid-cols-1 gap-4 px-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:shadow-xs lg:px-6 @xl/main:grid-cols-2 @5xl/main:grid-cols-4">
-      <StatCard
-        title="Products"
-        value={loading ? "—" : safeStats.totalProducts}
-        subtitle="Active products in catalog"
-        icon={Package}
-      />
-      <StatCard
-        title="Categories"
-        value={loading ? "—" : safeStats.totalCategories}
-        subtitle="Active categories"
-        icon={Layers}
-      />
-      <StatCard
-        title="Orders"
-        value={loading ? "—" : safeStats.totalOrders}
-        subtitle={`Last order: ${formatDate(safeStats.lastOrderDate)}`}
-        icon={ShoppingCart}
-      />
-      <StatCard
-        title="Customers"
-        value={loading ? "—" : safeStats.totalCustomers}
-        subtitle="Unique customers (by mobile)"
-        icon={Users}
-      />
-      <StatCard
-        title="Vendors"
-        value={loading ? "—" : safeStats.totalVendors}
-        subtitle="Active vendors"
-        icon={Truck}
-      />
-      <StatCard
-        title="Warehouses"
-        value={loading ? "—" : safeStats.totalWarehouses}
-        subtitle="Storage locations"
-        icon={Warehouse}
-      />
-      <StatCard
-        title="Pending POs"
-        value={loading ? "—" : safeStats.pendingPurchaseOrders}
-        subtitle="Purchase orders awaiting approval"
-        icon={FileText}
-      />
-      <StatCard
-        title="Low Stock"
-        value={loading ? "—" : safeStats.lowStockItems}
-        subtitle="Items at/below reorder point"
-        icon={AlertTriangle}
-      />
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {cardConfigs.map((config, index) => (
+        <StatCard
+          key={config.title}
+          title={config.title}
+          value={loading ? "—" : config.value}
+          subtitle={config.subtitle}
+          icon={config.icon}
+          index={index}
+          accent={config.accent}
+        />
+      ))}
     </div>
   )
 }
