@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -75,8 +75,16 @@ export function StockForm({ onSuccess }: StockFormProps) {
 	const selectedProduct = products.find((p: { _id: string }) => p._id === formData.productId);
 	const variants = selectedProduct?.variants || [];
 
-	// Initialize variant stocks when product changes
+	// Initialize variant stocks when product changes - use a ref to prevent infinite loops
+	const prevProductIdRef = useRef<string | null>(null);
+	
 	useEffect(() => {
+		// Only run if productId actually changed
+		if (formData.productId === prevProductIdRef.current) {
+			return;
+		}
+		prevProductIdRef.current = formData.productId;
+
 		if (formData.productId) {
 			const product = products.find((p: { _id: string }) => p._id === formData.productId);
 			const productVariants = product?.variants || [];
@@ -137,16 +145,37 @@ export function StockForm({ onSuccess }: StockFormProps) {
 		setIsLoading(true);
 
 		try {
-			// Use bulk API for multiple variants
-			await createStock({
-				productId: formData.productId,
-				warehouseId: formData.warehouseId,
-				variantName: formData.variantStocks[0]?.variantName || null,
-				quantity: formData.variantStocks[0]?.quantity || 0,
-				reorderPoint: formData.variantStocks[0]?.reorderPoint,
+			// Filter variants with quantity > 0
+			const validVariants = formData.variantStocks.filter(v => v.quantity > 0);
+
+			if (validVariants.length === 0) {
+				toast.error('Please enter quantity for at least one variant');
+				setIsLoading(false);
+				return;
+			}
+
+			// Use bulk API format for multiple variants
+			const response = await fetch('/api/stocks', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					productId: formData.productId,
+					warehouseId: formData.warehouseId,
+					variants: validVariants.map(v => ({
+						variantName: v.variantName,
+						quantity: v.quantity,
+						reorderPoint: v.reorderPoint,
+					})),
+				}),
 			});
 
-			toast.success('Stock added successfully');
+			const data = await response.json();
+			
+			if (!data.success) {
+				throw new Error(data.message || 'Failed to create stock');
+			}
+
+			toast.success(data.message || 'Stock added successfully');
 
 			// Reset form
 			setFormData({

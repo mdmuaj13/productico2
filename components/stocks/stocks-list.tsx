@@ -1,179 +1,56 @@
 'use client';
 
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
+import { useState, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Plus, Minus, Pencil, Trash } from 'lucide-react';
-import { useStocks, deleteStock } from '@/hooks/stocks';
+import { Plus, Search } from 'lucide-react';
+import { useStockSummary, StockSummaryResponse } from '@/hooks/stocks';
 import { StockForm } from './stock-form';
-import { StockEditForm } from './stock-edit-form';
-import { StockAdjustForm } from './stock-adjust-form';
-import { toast } from 'sonner';
-import { SimpleTable } from '@/components/simple-table';
-import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
+import { StockSummaryStats } from './stock-summary-stats';
+import { ProductStockCard } from './product-stock-card';
 import { Spinner } from '../ui/shadcn-io/spinner';
-
-interface Variant {
-	name: string;
-	price: number;
-	salePrice?: number;
-}
-
-interface Product {
-	_id: string;
-	title: string;
-	slug: string;
-	thumbnail?: string;
-	variants: Variant[];
-}
-
-interface Warehouse {
-	_id: string;
-	title: string;
-	slug: string;
-}
-
-interface Stock {
-	_id: string;
-	productId: Product;
-	variantName: string | null;
-	warehouseId: Warehouse;
-	quantity: number;
-	reorderPoint?: number;
-	createdAt: string;
-	updatedAt: string;
-}
 
 export function StocksList() {
 	const [createSheetOpen, setCreateSheetOpen] = useState(false);
-	const [editSheetOpen, setEditSheetOpen] = useState(false);
-	const [editingStock, setEditingStock] = useState<Stock | null>(null);
-	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-	const [deletingStock, setDeletingStock] = useState<Stock | null>(null);
-	const [isDeleting, setIsDeleting] = useState(false);
-	const [adjustSheetOpen, setAdjustSheetOpen] = useState(false);
+	const [searchQuery, setSearchQuery] = useState('');
 
-	const {
-		data: stocksData,
-		error,
-		mutate: mutateStocks,
-	} = useStocks({
-		page: 1,
-		limit: 100,
-	});
+	const { data: summaryData, error, mutate: mutateSummary } = useStockSummary();
 
-	const stocks = stocksData?.data || [];
-	const meta = stocksData?.meta;
-
-	const handleDeleteClick = (stock: Stock) => {
-		setDeletingStock(stock);
-		setDeleteDialogOpen(true);
+	const stockData = summaryData?.data as StockSummaryResponse | undefined;
+	const products = stockData?.products || [];
+	const stats = stockData?.stats || {
+		totalProducts: 0,
+		lowStockCount: 0,
+		outOfStockCount: 0,
 	};
 
-	const handleDeleteConfirm = async () => {
-		if (!deletingStock) return;
-
-		setIsDeleting(true);
-		try {
-			await deleteStock(deletingStock._id);
-			toast.success('Stock deleted successfully');
-			mutateStocks();
-		} catch {
-			toast.error('Failed to delete stock');
-		} finally {
-			setIsDeleting(false);
-			setDeleteDialogOpen(false);
-			setDeletingStock(null);
+	// Filter products by search query
+	const filteredProducts = useMemo(() => {
+		if (!searchQuery.trim()) {
+			return products;
 		}
-	};
-
-	const handleEditStock = (stock: Stock) => {
-		setEditingStock(stock);
-		setEditSheetOpen(true);
-	};
+		const query = searchQuery.toLowerCase();
+		return products.filter((p) =>
+			p.product.title.toLowerCase().includes(query)
+		);
+	}, [products, searchQuery]);
 
 	const handleCreateSuccess = () => {
 		setCreateSheetOpen(false);
-		mutateStocks();
+		mutateSummary();
 	};
 
-	const handleEditSuccess = () => {
-		setEditSheetOpen(false);
-		setEditingStock(null);
-		mutateStocks();
+	const handleStockUpdated = () => {
+		mutateSummary();
 	};
-
-	const handleAdjustSuccess = () => {
-		setAdjustSheetOpen(false);
-		mutateStocks();
-	};
-
-	const columns = [
-		{
-			key: 'productId',
-			header: 'Product',
-			render: (value: unknown) => (value as Product).title,
-		},
-		{
-			key: 'variantName',
-			header: 'Variant',
-			render: (value: unknown) => {
-				const variantName = value as string | null;
-				return variantName || 'Base Product';
-			},
-		},
-		{
-			key: 'warehouseId',
-			header: 'Warehouse',
-			render: (value: unknown) => <span>{(value as Warehouse).title}</span>,
-		},
-		{
-			key: 'quantity',
-			header: 'Quantity',
-			render: (value: unknown, row: Stock) => {
-				const quantity = value as number;
-				const reorderPoint = row.reorderPoint || 10;
-				const isLowStock = quantity <= reorderPoint;
-
-				return (
-					<span className={isLowStock ? 'text-red-600 font-semibold' : ''}>
-						{quantity}
-						{isLowStock && ' ⚠️'}
-					</span>
-				);
-			},
-		},
-		{
-			key: 'reorderPoint',
-			header: 'Reorder Point',
-			render: (value: unknown) => <span>{(value as number) || 10}</span>,
-		},
-		{
-			key: 'updatedAt',
-			header: 'Last Updated',
-			render: (value: unknown) => <span>{new Date(String(value)).toLocaleDateString()}</span>,
-		},
-	];
-
-	const actions = [
-		{
-			label: <Pencil/>,
-			onClick: (stock: Stock) => handleEditStock(stock),
-			variant: 'outline' as const,
-		},
-		{
-			label: <Trash/>,
-			onClick: (stock: Stock) => handleDeleteClick(stock),
-			variant: 'destructive' as const,
-		},
-	];
 
 	if (error) {
 		return (
 			<Card>
 				<CardContent className="p-6">
-					<p className="text-center text-red-500">Failed to load stocks</p>
+					<p className="text-center text-red-500">Failed to load stock data</p>
 				</CardContent>
 			</Card>
 		);
@@ -181,85 +58,72 @@ export function StocksList() {
 
 	return (
 		<div className="space-y-6">
+			{/* Header */}
 			<div className="flex items-center justify-between">
-				<h1 className="text-2xl font-bold">Stock Management ({meta?.total || 0})</h1>
-				<div className="flex items-center gap-2">
-					<Sheet open={adjustSheetOpen} onOpenChange={setAdjustSheetOpen}>
-						<SheetTrigger asChild>
-							<Button variant="outline">
-								<Minus className="h-4 w-4 mr-2" />
-								Adjust Stock
-							</Button>
-						</SheetTrigger>
-						<SheetContent>
-							<div className="h-full">
-								<StockAdjustForm onSuccess={handleAdjustSuccess} />
-							</div>
-						</SheetContent>
-					</Sheet>
-					<Sheet open={createSheetOpen} onOpenChange={setCreateSheetOpen}>
-						<SheetTrigger asChild>
-							<Button>
-								<Plus className="h-4 w-4 mr-2" />
-								Add Stock
-							</Button>
-						</SheetTrigger>
-						<SheetContent>
-							<div className="h-full">
-								<StockForm onSuccess={handleCreateSuccess} />
-							</div>
-						</SheetContent>
-					</Sheet>
-				</div>
+				<h1 className="text-2xl font-bold">Stock Management</h1>
+				<Sheet open={createSheetOpen} onOpenChange={setCreateSheetOpen}>
+					<SheetTrigger asChild>
+						<Button>
+							<Plus className="h-4 w-4 mr-2" />
+							Add Stock
+						</Button>
+					</SheetTrigger>
+					<SheetContent>
+						<div className="h-full">
+							<StockForm onSuccess={handleCreateSuccess} />
+						</div>
+					</SheetContent>
+				</Sheet>
 			</div>
 
-			{/* Stocks Table */}
-			<Card>
-				<CardContent>
-					{!stocksData && !error ? (
-						<div className="flex items-center justify-center py-8">
+			{/* Stats Summary */}
+			<StockSummaryStats
+				totalProducts={stats.totalProducts}
+				lowStockCount={stats.lowStockCount}
+				outOfStockCount={stats.outOfStockCount}
+			/>
+
+			{/* Search */}
+			<div className="relative">
+				<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+				<Input
+					placeholder="Search products..."
+					value={searchQuery}
+					onChange={(e) => setSearchQuery(e.target.value)}
+					className="pl-10"
+				/>
+			</div>
+
+			{/* Product Stock List */}
+			{!summaryData && !error ? (
+				<Card>
+					<CardContent className="py-12">
+						<div className="flex items-center justify-center">
 							<Spinner variant="pinwheel" />
 						</div>
-					) : stocks.length === 0 ? (
-						<div className="flex items-center justify-center py-8">
-							<p>No stocks found. Add your first stock entry to get started.</p>
-						</div>
-					) : (
-						<SimpleTable
-							data={stocks}
-							columns={columns}
-							actions={actions}
-							showPagination={false}
+					</CardContent>
+				</Card>
+			) : filteredProducts.length === 0 ? (
+				<Card>
+					<CardContent className="py-12">
+						<p className="text-center text-muted-foreground">
+							{searchQuery
+								? 'No products match your search.'
+								: 'No stock entries found. Add your first stock entry to get started.'}
+						</p>
+					</CardContent>
+				</Card>
+			) : (
+				<div className="space-y-3">
+					{filteredProducts.map((productStock) => (
+						<ProductStockCard
+							key={productStock.productId}
+							productStock={productStock}
+							onStockUpdated={handleStockUpdated}
 						/>
-					)}
-				</CardContent>
-			</Card>
-
-			{/* Edit Sheet */}
-			<Sheet open={editSheetOpen} onOpenChange={setEditSheetOpen}>
-				<SheetContent>
-					<div className="h-full">
-						{editingStock && (
-							<StockEditForm stock={editingStock} onSuccess={handleEditSuccess} />
-						)}
-					</div>
-				</SheetContent>
-			</Sheet>
-
-			{/* Delete Confirmation Dialog */}
-			<ConfirmationDialog
-				open={deleteDialogOpen}
-				onOpenChange={setDeleteDialogOpen}
-				onConfirm={handleDeleteConfirm}
-				title="Delete Stock"
-				description={`Are you sure you want to delete stock for "${deletingStock?.productId.title}"${
-					deletingStock?.variantName ? ` - ${deletingStock.variantName}` : ''
-				} at "${deletingStock?.warehouseId.title}"? This action cannot be undone.`}
-				confirmText="Delete"
-				cancelText="Cancel"
-				variant="destructive"
-				isLoading={isDeleting}
-			/>
+					))}
+				</div>
+			)}
 		</div>
 	);
 }
