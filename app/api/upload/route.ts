@@ -4,73 +4,104 @@ import { ApiSerializer } from '@/types';
 import { authenticateToken } from '@/lib/auth';
 import r2Client, { R2_BUCKET_NAME, R2_PUBLIC_URL } from '@/lib/r2';
 
+interface UploadedImage {
+	url: string;
+	key: string;
+	originalName: string;
+}
+
+const ALLOWED_TYPES = [
+	'image/jpeg',
+	'image/jpg',
+	'image/png',
+	'image/webp',
+	'image/gif',
+];
+
+const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+
+async function uploadFile(file: File, folder: string): Promise<string> {
+	const timestamp = Date.now();
+	const randomId = Math.random().toString(36).substring(2, 8);
+	const extension = file.name.split('.').pop() || 'jpg';
+	const fileName = `${folder}/${timestamp}-${randomId}.${extension}`;
+
+	const bytes = await file.arrayBuffer();
+	const buffer = Buffer.from(bytes);
+
+	const command = new PutObjectCommand({
+		Bucket: R2_BUCKET_NAME,
+		Key: fileName,
+		Body: buffer,
+		ContentType: file.type,
+	});
+
+	await r2Client.send(command);
+
+	return fileName;
+	// return {
+	// 	url: `${R2_PUBLIC_URL}/${fileName}`,
+	// 	key: fileName,
+	// 	originalName: file.name,
+	// };
+}
+
+function validateFile(file: File): string | null {
+	if (!ALLOWED_TYPES.includes(file.type)) {
+		return `Invalid file type for "${file.name}". Only JPEG, PNG, WebP, and GIF are allowed.`;
+	}
+	if (file.size > MAX_SIZE) {
+		return `File "${file.name}" is too large. Maximum size is 10MB.`;
+	}
+	return null;
+}
+
 export async function POST(request: NextRequest) {
 	try {
 		const { error: authError } = await authenticateToken(request);
 		if (authError) return authError;
 
 		const formData = await request.formData();
-		const file = formData.get('file') as File;
 		const folder = (formData.get('folder') as string) || 'images';
 
-		if (!file) {
-			return ApiSerializer.error('No file provided', 400);
+		// Collect files from 'files' field (works for single or multiple)
+		const files: File[] = [];
+
+		const uploadedFiles = formData.getAll('files');
+		for (const f of uploadedFiles) {
+			if (f instanceof File) {
+				files.push(f);
+			}
 		}
 
-		const allowedTypes = [
-			'image/jpeg',
-			'image/jpg',
-			'image/png',
-			'image/webp',
-			'image/gif',
-		];
-		if (!allowedTypes.includes(file.type)) {
-			return ApiSerializer.error(
-				'Invalid file type. Only JPEG, PNG, WebP, and GIF are allowed.',
-				400
-			);
+		if (files.length === 0) {
+			return ApiSerializer.error('No files provided', 400);
 		}
 
-		const maxSize = 10 * 1024 * 1024; // 10MB
-		if (file.size > maxSize) {
-			return ApiSerializer.error(
-				'File size too large. Maximum size is 10MB.',
-				400
-			);
+		// Validate all files first
+		for (const file of files) {
+			const validationError = validateFile(file);
+			if (validationError) {
+				return ApiSerializer.error(validationError, 400);
+			}
 		}
 
-		// Generate unique filename
-		const timestamp = Date.now();
-		const randomId = Math.random().toString(36).substring(2, 8);
-		const extension = file.name.split('.').pop() || 'jpg';
-		const fileName = `${folder}/${timestamp}-${randomId}.${extension}`;
-
-		// Convert file to buffer
-		const bytes = await file.arrayBuffer();
-		const buffer = Buffer.from(bytes);
-
-		// Upload to R2
-		const command = new PutObjectCommand({
-			Bucket: R2_BUCKET_NAME,
-			Key: fileName,
-			Body: buffer,
-			ContentType: file.type,
-		});
-
-		await r2Client.send(command);
-
-		const publicUrl = `${R2_PUBLIC_URL}/${fileName}`;
+		// Upload all files
+		const uploadedImages = await Promise.all(
+			files.map((file) => uploadFile(file, folder)),
+		);
 
 		return ApiSerializer.success(
-			{
-				url: publicUrl,
-				key: fileName,
-				folder: folder,
-			},
-			'Image uploaded successfully'
+			uploadedImages,
+			// {
+			// 	images: uploadedImages,
+			// 	count: uploadedImages.length,
+			// 	folder: folder,
+			// },
+			`${uploadedImages.length} image(s) uploaded successfully`,
 		);
 	} catch (error) {
 		console.error('Upload error:', error);
-		return ApiSerializer.error('Failed to upload image');
+		return ApiSerializer.error('Failed to upload images');
 	}
 }
