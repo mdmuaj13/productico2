@@ -66,7 +66,7 @@ const InvoiceItemSchema = new Schema(
 			required: true,
 		},
 	},
-	{ _id: false }
+	{ _id: false },
 );
 
 /**
@@ -220,7 +220,7 @@ const InvoiceSchema = new mongoose.Schema(
 		timestamps: true,
 		toJSON: { virtuals: true },
 		toObject: { virtuals: true },
-	}
+	},
 );
 
 /* ============================
@@ -236,8 +236,7 @@ InvoiceSchema.virtual('user', {
 /* ============================
    Indexes
 ============================ */
-InvoiceSchema.index({ invoiceNo: 1 });
-InvoiceSchema.index({ referenceNo: 1 });
+// Note: invoiceNo and referenceNo already have indexes from 'unique: true'
 InvoiceSchema.index({ clientMobile: 1 });
 InvoiceSchema.index({ status: 1 });
 InvoiceSchema.index({ paymentStatus: 1 });
@@ -270,4 +269,5 @@ InvoiceSchema.pre('save', function (next) {
 	next();
 });
 
-export default mongoose.models.Invoice || mongoose.model('Invoice', InvoiceSchema);
+export default mongoose.models.Invoice ||
+	mongoose.model('Invoice', InvoiceSchema);

@@ -1,8 +1,7 @@
 import { NextRequest } from 'next/server';
-import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { ApiSerializer } from '@/types';
 import { authenticateToken } from '@/lib/auth';
-import r2Client, { R2_BUCKET_NAME, R2_PUBLIC_URL } from '@/lib/r2';
+import cloudinary from '@/lib/cloudinary';
 
 export async function POST(request: NextRequest) {
 	try {
@@ -12,6 +11,8 @@ export async function POST(request: NextRequest) {
 		const formData = await request.formData();
 		const file = formData.get('file') as File;
 		const folder = (formData.get('folder') as string) || 'images';
+		const cloudinary_path = process.env.CLOUDINARY_PATH || "producticodemo";
+		const path = `${cloudinary_path}/${folder}`;
 
 		if (!file) {
 			return ApiSerializer.error('No file provided', 400);
@@ -39,33 +40,31 @@ export async function POST(request: NextRequest) {
 			);
 		}
 
-		// Generate unique filename
-		const timestamp = Date.now();
-		const randomId = Math.random().toString(36).substring(2, 8);
-		const extension = file.name.split('.').pop() || 'jpg';
-		const fileName = `${folder}/${timestamp}-${randomId}.${extension}`;
-
-		// Convert file to buffer
 		const bytes = await file.arrayBuffer();
 		const buffer = Buffer.from(bytes);
 
-		// Upload to R2
-		const command = new PutObjectCommand({
-			Bucket: R2_BUCKET_NAME,
-			Key: fileName,
-			Body: buffer,
-			ContentType: file.type,
+		const result = await new Promise((resolve, reject) => {
+			cloudinary.uploader
+				.upload_stream(
+					{
+						folder: path,
+						resource_type: 'image',
+					},
+					(error, result) => {
+						if (error) reject(error);
+						else resolve(result);
+					}
+				)
+				.end(buffer);
 		});
 
-		await r2Client.send(command);
-
-		const publicUrl = `${R2_PUBLIC_URL}/${fileName}`;
+		console.log(result);
 
 		return ApiSerializer.success(
 			{
-				url: publicUrl,
-				key: fileName,
-				folder: folder,
+				url: (result as { secure_url: string }).secure_url,
+				public_id: (result as { public_id: string }).public_id,
+				folder: path,
 			},
 			'Image uploaded successfully'
 		);

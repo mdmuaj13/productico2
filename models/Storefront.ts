@@ -11,25 +11,26 @@ interface IStorefront {
 // value = info / assets / social / contact / privacy / terms / refund
 const storefrontSchema = new Schema<IStorefront>(
 	{
-		type: { 
-			type: String, 
+		type: {
+			type: String,
 			required: true,
 			unique: true,
-			default: 'info'
+			default: 'info',
 		},
-		value: { 
-			type: Schema.Types.Mixed, 
+		value: {
+			type: Schema.Types.Mixed,
 			required: true,
-			default: {}
+			default: {},
 		},
 	},
 	{
 		timestamps: true,
-	}
+	},
 );
 
-storefrontSchema.index({ type: 1 });
+// Note: 'type' already has an index from 'unique: true'
 
-const Storefront = models.Storefront || model<IStorefront>('Storefront', storefrontSchema);
+const Storefront =
+	models.Storefront || model<IStorefront>('Storefront', storefrontSchema);
 
 export default Storefront;

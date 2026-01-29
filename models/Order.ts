@@ -1,69 +1,73 @@
 import mongoose, { Schema } from 'mongoose';
 
 // Product item schema with variant support
-const OrderProductSchema = new Schema({
-	_id: {
-		type: Schema.Types.ObjectId,
-		required: true,
+const OrderProductSchema = new Schema(
+	{
+		_id: {
+			type: Schema.Types.ObjectId,
+			required: true,
+		},
+		slug: {
+			type: String,
+		},
+		title: {
+			type: String,
+			required: true,
+		},
+		description: {
+			type: String,
+		},
+		shortDetail: {
+			type: String,
+		},
+		thumbnail: {
+			type: String,
+		},
+		// Base product price (for reference)
+		basePrice: {
+			type: Number,
+			required: true,
+		},
+		// Actual price used (could be base or variant price)
+		price: {
+			type: Number,
+			required: true,
+		},
+		quantity: {
+			type: Number,
+			required: true,
+			min: 1,
+		},
+		// Variant fields
+		variantName: {
+			type: String,
+			default: null, // e.g., "Red - Large", "500ml"
+		},
+		variantPrice: {
+			type: Number,
+			default: null, // Original variant price
+		},
+		variantSalePrice: {
+			type: Number,
+			default: null, // Variant sale price if applicable
+		},
+		// Warehouse for fulfillment
+		warehouseId: {
+			type: Schema.Types.ObjectId,
+			ref: 'Warehouse',
+			default: null,
+		},
+		// Line total for this item
+		lineTotal: {
+			type: Number,
+			required: true, // price * quantity
+		},
 	},
-	slug: {
-		type: String,
-	},
-	title: {
-		type: String,
-		required: true,
-	},
-	description: {
-		type: String,
-	},
-	shortDetail: {
-		type: String,
-	},
-	thumbnail: {
-		type: String,
-	},
-	// Base product price (for reference)
-	basePrice: {
-		type: Number,
-		required: true,
-	},
-	// Actual price used (could be base or variant price)
-	price: {
-		type: Number,
-		required: true,
-	},
-	quantity: {
-		type: Number,
-		required: true,
-		min: 1,
-	},
-	// Variant fields
-	variantName: {
-		type: String,
-		default: null, // e.g., "Red - Large", "500ml"
-	},
-	variantPrice: {
-		type: Number,
-		default: null, // Original variant price
-	},
-	variantSalePrice: {
-		type: Number,
-		default: null, // Variant sale price if applicable
-	},
-	// Warehouse for fulfillment
-	warehouseId: {
-		type: Schema.Types.ObjectId,
-		ref: 'Warehouse',
-		default: null,
-	},
-	// Line total for this item
-	lineTotal: {
-		type: Number,
-		required: true, // price * quantity
-	},
-}, { _id: false });
+	{ _id: false },
+);
 
-const OrderSchema = new mongoose.Schema({
+const OrderSchema = new mongoose.Schema(
+	{
 		// Customer Information
 		customerName: {
 			type: String,
@@ -170,11 +174,11 @@ const OrderSchema = new mongoose.Schema({
 			default: null,
 		},
 	},
-	{ 
+	{
 		timestamps: true,
 		toJSON: { virtuals: true },
 		toObject: { virtuals: true },
-	}
+	},
 );
 
 // Virtual for user relationship
@@ -186,8 +190,7 @@ OrderSchema.virtual('user', {
 });
 
 // Indexes for performance
-OrderSchema.index({ code: 1 });
-OrderSchema.index({ trackingCode: 1 });
+// Note: code and trackingCode already have indexes from 'unique: true'
 OrderSchema.index({ customerMobile: 1 });
 OrderSchema.index({ status: 1 });
 OrderSchema.index({ paymentStatus: 1 });
