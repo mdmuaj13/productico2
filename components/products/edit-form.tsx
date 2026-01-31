@@ -279,7 +279,7 @@ export function ProductEditForm({ product, onSuccess }: ProductEditFormProps) {
               previews={thumbPreview}
               setPreviews={setThumbPreview}
               existing={existingThumbnail ? [existingThumbnail] : []}
-              setExisting={(arr) => setExistingThumbnail(arr[0] || "")}
+              onExistingChange={(next) => setExistingThumbnail(next[0] || "")}
               disabled={isBusy}
             />
 
@@ -289,7 +289,7 @@ export function ProductEditForm({ product, onSuccess }: ProductEditFormProps) {
                 previews={imagePreviews}
                 setPreviews={setImagePreviews}
                 existing={existingImages}
-                setExisting={setExistingImages}
+                onExistingChange={setExistingImages}
                 maxFiles={8}
                 disabled={isBusy}
               />
