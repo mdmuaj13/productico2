@@ -1,4 +1,3 @@
-// app/(storefront)/layout.tsx
 import type { ReactNode } from "react";
 import { StorefrontFooter } from "./_components/storefront-footer";
 import StorefrontHeader from "./_components/storefront-header";

@@ -1,4 +1,3 @@
-// app/(storefront)/_components/storefront-cart-badge.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";

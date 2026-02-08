@@ -1,4 +1,3 @@
-// app/(storefront)/products/page.tsx
 import Link from "next/link";
 import { headers } from "next/headers";
 import type { Metadata } from "next";
@@ -8,6 +7,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Tag,
+  X,
 } from "lucide-react";
 
 type ApiSuccess<T> = { success: true; message: string; data: T; meta?: any };
@@ -149,9 +149,14 @@ export default async function ProductsPage({
 }) {
   const page = Math.max(1, Number(searchParams.page || 1));
   const limit = Math.min(24, Math.max(8, Number(searchParams.limit || 12)));
-  const search = typeof searchParams.search === "string" ? searchParams.search : "";
+  const search =
+    typeof searchParams.search === "string" ? searchParams.search : "";
   const categoryId =
-    typeof searchParams.categoryId === "string" ? searchParams.categoryId : undefined;
+    typeof searchParams.categoryId === "string"
+      ? searchParams.categoryId
+      : undefined;
+
+  const hasActiveFilters = Boolean(search || categoryId);
 
   const [categories, productRes] = await Promise.all([
     fetchCategories(),
@@ -183,7 +188,7 @@ export default async function ProductsPage({
           {/* Search */}
           <form
             action="/products"
-            className="w-full md:w-[420px] rounded-2xl border border-gray-200 dark:border-gray-800 bg-white/70 dark:bg-gray-900/30 p-2 flex items-center gap-2"
+            className="w-full md:w-[520px] rounded-2xl border border-gray-200 dark:border-gray-800 bg-white/70 dark:bg-gray-900/30 p-2 flex items-center gap-2"
           >
             <Search className="h-4 w-4 text-gray-500" />
             <input
@@ -192,7 +197,23 @@ export default async function ProductsPage({
               placeholder="Search products…"
               className="w-full bg-transparent outline-none text-sm text-gray-900 dark:text-white placeholder:text-gray-400"
             />
-            {categoryId ? <input type="hidden" name="categoryId" value={categoryId} /> : null}
+
+            {/* keep category filter when searching */}
+            {categoryId ? (
+              <input type="hidden" name="categoryId" value={categoryId} />
+            ) : null}
+
+            {hasActiveFilters ? (
+              <Link
+                href="/products"
+                className="rounded-xl px-3 py-2 text-sm font-semibold border border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-200 hover:bg-white dark:hover:bg-gray-900/40 transition inline-flex items-center gap-2"
+                aria-label="Clear search and filters"
+              >
+                <X className="h-4 w-4" />
+                Clear
+              </Link>
+            ) : null}
+
             <button
               type="submit"
               className="rounded-xl px-3 py-2 text-sm font-semibold bg-gray-900 text-white dark:bg-white dark:text-gray-900 hover:opacity-90 transition"
@@ -207,9 +228,22 @@ export default async function ProductsPage({
           {hasSidebar ? (
             <aside className="lg:col-span-3">
               <div className="sticky top-[76px] space-y-3">
-                <div className="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white">
-                  <SlidersHorizontal className="h-4 w-4" />
-                  Filters
+                {/* Filters header + clear */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white">
+                    <SlidersHorizontal className="h-4 w-4" />
+                    Filters
+                  </div>
+
+                  {hasActiveFilters ? (
+                    <Link
+                      href="/products"
+                      className="text-xs font-semibold text-gray-700 dark:text-gray-200 hover:opacity-80 inline-flex items-center gap-1"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                      Clear
+                    </Link>
+                  ) : null}
                 </div>
 
                 <div className="rounded-3xl border border-gray-200 dark:border-gray-800 bg-white/70 dark:bg-gray-900/30 p-4">
@@ -298,6 +332,19 @@ export default async function ProductsPage({
                     <ChevronRight className="h-4 w-4" />
                   </Link>
                 </div>
+
+                {/* Bottom clear (only when active) */}
+                {hasActiveFilters ? (
+                  <div className="mt-6 flex justify-center">
+                    <Link
+                      href="/products"
+                      className="rounded-2xl px-4 py-2.5 border border-gray-200 dark:border-gray-800 bg-white/70 dark:bg-gray-900/30 font-semibold text-sm text-gray-700 dark:text-gray-200 hover:bg-white dark:hover:bg-gray-900/40 transition inline-flex items-center gap-2"
+                    >
+                      <X className="h-4 w-4" />
+                      Clear filters
+                    </Link>
+                  </div>
+                ) : null}
               </>
             ) : (
               <div className="rounded-3xl border border-gray-200 dark:border-gray-800 bg-white/70 dark:bg-gray-900/30 p-8 text-center">

@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 
 import { Facebook, Instagram, Twitter, Linkedin } from "lucide-react";
+import Image from "next/image";
 
 function SocialIconButton({
   href,
@@ -316,50 +317,6 @@ export default async function StorefrontHomePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 via-white to-white dark:from-gray-950 dark:via-gray-950 dark:to-gray-900">
-      {/* Topbar */}
-      {/* <header className="sticky top-0 z-50 border-b border-gray-200/70 dark:border-gray-800 bg-white/80 dark:bg-gray-950/70 backdrop-blur">
-        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            {logo ? (
-              <img
-                src={logo}
-                alt={shopName}
-                className="h-9 w-9 rounded-xl object-cover border border-gray-200 dark:border-gray-800 bg-white"
-              />
-            ) : (
-              <div className="h-9 w-9 rounded-xl bg-gray-900 dark:bg-white" />
-            )}
-            <div className="leading-tight">
-              <div className="font-bold text-gray-900 dark:text-white">
-                {shopName}
-              </div>
-              <div className="text-xs text-gray-500 hidden sm:block">
-                {tagline}
-              </div>
-            </div>
-          </Link>
-
-          <nav className="flex items-center gap-2 sm:gap-3">
-            <Link
-              href="/cart"
-              className="rounded-xl px-3 py-2 text-sm font-medium">
-              <CarTaxiFront/>
-            </Link>
-
-            <Link
-              href="/products"
-              className="rounded-xl px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-900/40 transition">
-              Products
-            </Link>
-            <Link
-              href="/app/dashboard"
-              className="rounded-xl px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-900/40 transition">
-              Admin
-            </Link>
-          </nav>
-        </div>
-      </header> */}
-
       {/* Hero */}
       <section className="container mx-auto px-4 pt-8 sm:pt-10 pb-6">
         <div className="relative overflow-hidden rounded-3xl border border-gray-200 dark:border-gray-800 bg-white/70 dark:bg-gray-900/30">
@@ -432,12 +389,17 @@ export default async function StorefrontHomePage() {
                 </div>
               </div>
 
-              <div className="rounded-3xl overflow-hidden bg-gray-100 dark:bg-gray-800 min-h-[280px] border border-gray-200/70 dark:border-gray-800">
-                <img
-                  src={heroImage}
-                  alt={`${shopName} banner`}
-                  className="h-full w-full object-cover"
-                />
+              <div className="relative rounded-3xl overflow-hidden border border-gray-200/70 dark:border-gray-800 bg-gray-100 dark:bg-gray-800">
+                {/* <div className="relative w-full aspect-[3/2] max-h-[360px] border"> */}
+                  <Image
+                    src={heroImage}
+                    alt={`${shopName} banner`}
+                    fill
+                    priority
+                    sizes="(max-width: 768px) 100vw, 480px"
+                    className="object-cover"
+                  />
+                {/* </div> */}
               </div>
             </div>
           ) : (

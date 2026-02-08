@@ -1,4 +1,3 @@
-// app/(storefront)/_components/storefront-header.tsx
 import Link from "next/link";
 import { ShoppingBag, LayoutDashboard } from "lucide-react";
 import CartBadge from "./storefront-cart-badge";
