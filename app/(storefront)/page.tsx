@@ -11,6 +11,7 @@ import {
   MapPin,
   ChevronRight,
   Store,
+  CarTaxiFront,
 } from "lucide-react";
 
 import { Facebook, Instagram, Twitter, Linkedin } from "lucide-react";
@@ -316,7 +317,7 @@ export default async function StorefrontHomePage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 via-white to-white dark:from-gray-950 dark:via-gray-950 dark:to-gray-900">
       {/* Topbar */}
-      <header className="sticky top-0 z-50 border-b border-gray-200/70 dark:border-gray-800 bg-white/80 dark:bg-gray-950/70 backdrop-blur">
+      {/* <header className="sticky top-0 z-50 border-b border-gray-200/70 dark:border-gray-800 bg-white/80 dark:bg-gray-950/70 backdrop-blur">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
             {logo ? (
@@ -340,6 +341,12 @@ export default async function StorefrontHomePage() {
 
           <nav className="flex items-center gap-2 sm:gap-3">
             <Link
+              href="/cart"
+              className="rounded-xl px-3 py-2 text-sm font-medium">
+              <CarTaxiFront/>
+            </Link>
+
+            <Link
               href="/products"
               className="rounded-xl px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-900/40 transition">
               Products
@@ -351,7 +358,7 @@ export default async function StorefrontHomePage() {
             </Link>
           </nav>
         </div>
-      </header>
+      </header> */}
 
       {/* Hero */}
       <section className="container mx-auto px-4 pt-8 sm:pt-10 pb-6">
@@ -558,155 +565,6 @@ export default async function StorefrontHomePage() {
           </div>
         </section>
       ) : null}
-
-      {/* Better Footer */}
-      <footer className="mt-10 border-t border-gray-200 dark:border-gray-800 bg-white/60 dark:bg-gray-950/40">
-        <div className="container mx-auto px-4 py-12">
-          <div className="grid gap-10 md:grid-cols-12">
-            {/* Brand */}
-            <div className="md:col-span-5 space-y-4">
-              <Link href="/" className="flex items-center gap-2">
-                {logo ? (
-                  <img
-                    src={logo}
-                    alt={shopName}
-                    className="h-10 w-10 rounded-2xl object-cover border border-gray-200 dark:border-gray-800 bg-white"
-                  />
-                ) : (
-                  <div className="h-10 w-10 rounded-2xl bg-gray-900 dark:bg-white" />
-                )}
-                <div>
-                  <div className="text-lg font-bold text-gray-900 dark:text-white">
-                    {shopName}
-                  </div>
-                  <div className="text-sm text-gray-600 dark:text-gray-300">
-                    {tagline}
-                  </div>
-                </div>
-              </Link>
-
-              <div className="text-sm text-gray-600 dark:text-gray-300 max-w-md">
-                {info?.metaDescription ||
-                  "Shop confidently with clear pricing, fast checkout, and helpful support."}
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                <SocialIconButton
-                  href={contact?.socialLinks?.facebook}
-                  label="Facebook"
-                  icon={Facebook}
-                />
-                <SocialIconButton
-                  href={contact?.socialLinks?.instagram}
-                  label="Instagram"
-                  icon={Instagram}
-                />
-                <SocialIconButton
-                  href={contact?.socialLinks?.twitter}
-                  label="Twitter"
-                  icon={Twitter}
-                />
-                <SocialIconButton
-                  href={contact?.socialLinks?.linkedin}
-                  label="LinkedIn"
-                  icon={Linkedin}
-                />
-              </div>
-            </div>
-
-            {/* Links */}
-            <div className="md:col-span-3 space-y-3">
-              <div className="text-sm font-semibold text-gray-900 dark:text-white">
-                Shop
-              </div>
-              <div className="flex flex-col gap-2 text-sm">
-                <Link
-                  className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
-                  href="/products">
-                  Products
-                </Link>
-                <Link
-                  className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
-                  href="/app/dashboard">
-                  Admin
-                </Link>
-              </div>
-            </div>
-
-            {/* Policies */}
-            <div className="md:col-span-2 space-y-3">
-              <div className="text-sm font-semibold text-gray-900 dark:text-white">
-                Policies
-              </div>
-              <div className="flex flex-col gap-2 text-sm">
-                <Link
-                  className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
-                  href="/policy?type=terms">
-                  Terms
-                </Link>
-                <Link
-                  className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
-                  href="/policy?type=privacy">
-                  Privacy
-                </Link>
-                <Link
-                  className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
-                  href="/policy?type=refund">
-                  Refund
-                </Link>
-              </div>
-            </div>
-
-            {/* Contact */}
-            <div className="md:col-span-2 space-y-3">
-              <div className="text-sm font-semibold text-gray-900 dark:text-white">
-                Contact
-              </div>
-
-              <div className="text-sm text-gray-600 dark:text-gray-300 space-y-2">
-                {contact?.email ? (
-                  <a
-                    className="block hover:text-gray-900 dark:hover:text-white"
-                    href={`mailto:${contact.email}`}>
-                    {contact.email}
-                  </a>
-                ) : null}
-                {contact?.phone ? (
-                  <a
-                    className="block hover:text-gray-900 dark:hover:text-white"
-                    href={`tel:${contact.phone}`}>
-                    {contact.phone}
-                  </a>
-                ) : null}
-                {addressLine ? <div>{addressLine}</div> : null}
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-t border-gray-200 dark:border-gray-800 pt-6 text-xs text-gray-500">
-            <div>
-              © {new Date().getFullYear()} {shopName}. All rights reserved.
-            </div>
-            <div className="flex gap-4">
-              <Link
-                className="hover:text-gray-700 dark:hover:text-gray-200"
-                href="/policy?type=terms">
-                Terms
-              </Link>
-              <Link
-                className="hover:text-gray-700 dark:hover:text-gray-200"
-                href="/policy?type=privacy">
-                Privacy
-              </Link>
-              <Link
-                className="hover:text-gray-700 dark:hover:text-gray-200"
-                href="/policy?type=refund">
-                Refund
-              </Link>
-            </div>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }

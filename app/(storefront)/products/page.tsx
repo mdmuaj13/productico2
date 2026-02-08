@@ -1,3 +1,4 @@
+// app/(storefront)/products/page.tsx
 import Link from "next/link";
 import { headers } from "next/headers";
 import type { Metadata } from "next";
@@ -6,7 +7,6 @@ import {
   SlidersHorizontal,
   ChevronLeft,
   ChevronRight,
-  LayoutGrid,
   Tag,
 } from "lucide-react";
 
@@ -33,17 +33,21 @@ type Product = {
 };
 
 async function serverBaseUrl() {
+  // In some Next versions, headers() is async -> Promise<ReadonlyHeaders>
   const h = await headers();
   const proto = h.get("x-forwarded-proto") ?? "http";
   const host = h.get("x-forwarded-host") ?? h.get("host");
+  if (!host) return "http://localhost:3000";
   return `${proto}://${host}`;
 }
 
 async function fetchCategories(): Promise<Category[]> {
-  const res = await fetch(`${serverBaseUrl()}/api/categories`, {
-    next: { revalidate: 120 },
-  });
+  const base = await serverBaseUrl();
+  const url = new URL("/api/categories", base);
+
+  const res = await fetch(url.toString(), { next: { revalidate: 120 } });
   if (!res.ok) return [];
+
   const json = (await res.json()) as ApiSuccess<Category[]>;
   return json.data || [];
 }
@@ -54,16 +58,15 @@ async function fetchProducts(opts: {
   search: string;
   categoryId?: string;
 }): Promise<{ items: Product[]; meta?: any }> {
-  const sp = new URLSearchParams();
-  sp.set("page", String(opts.page));
-  sp.set("limit", String(opts.limit));
-  if (opts.search) sp.set("search", opts.search);
-  if (opts.categoryId) sp.set("categoryId", opts.categoryId);
+  const base = await serverBaseUrl();
+  const url = new URL("/api/products", base);
 
-  const res = await fetch(`${serverBaseUrl()}/api/products?${sp.toString()}`, {
-    next: { revalidate: 30 },
-  });
+  url.searchParams.set("page", String(opts.page));
+  url.searchParams.set("limit", String(opts.limit));
+  if (opts.search) url.searchParams.set("search", opts.search);
+  if (opts.categoryId) url.searchParams.set("categoryId", opts.categoryId);
 
+  const res = await fetch(url.toString(), { next: { revalidate: 30 } });
   if (!res.ok) return { items: [], meta: undefined };
 
   const json = (await res.json()) as ApiSuccess<Product[]>;
@@ -74,6 +77,16 @@ function categoryLabel(c: Category) {
   return c.title || c.name || "Category";
 }
 
+function buildUrl(params: Record<string, string | number | undefined>) {
+  const sp = new URLSearchParams();
+  Object.entries(params).forEach(([k, v]) => {
+    if (v === undefined || v === "") return;
+    sp.set(k, String(v));
+  });
+  const qs = sp.toString();
+  return qs ? `/products?${qs}` : "/products";
+}
+
 function ProductCard({ p }: { p: Product }) {
   const img = p.thumbnail || p.images?.[0] || p.categoryId?.image || "";
   const price = p.salePrice ?? p.price;
@@ -81,8 +94,9 @@ function ProductCard({ p }: { p: Product }) {
 
   return (
     <Link
-      href={p.slug ? `/products/${encodeURIComponent(p.slug)}` : `/#`}
-      className="group rounded-2xl border border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/40 overflow-hidden hover:shadow-md transition">
+      href={p.slug ? `/p/${encodeURIComponent(p.slug)}` : "#"}
+      className="group rounded-2xl border border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/40 overflow-hidden hover:shadow-md transition"
+    >
       <div className="aspect-[4/3] bg-gray-100 dark:bg-gray-800 overflow-hidden">
         {img ? (
           <img
@@ -124,15 +138,6 @@ function ProductCard({ p }: { p: Product }) {
   );
 }
 
-function buildUrl(params: Record<string, string | number | undefined>) {
-  const sp = new URLSearchParams();
-  Object.entries(params).forEach(([k, v]) => {
-    if (v === undefined || v === "") return;
-    sp.set(k, String(v));
-  });
-  return `/products?${sp.toString()}`;
-}
-
 export const metadata: Metadata = {
   title: "Products",
 };
@@ -140,15 +145,13 @@ export const metadata: Metadata = {
 export default async function ProductsPage({
   searchParams,
 }: {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
+  searchParams: Record<string, string | string[] | undefined>;
 }) {
-  const sp = await searchParams;
-
-  const page = Math.max(1, Number(sp.page || 1));
-  const limit = Math.min(24, Math.max(8, Number(sp.limit || 12)));
-  const search = typeof sp.search === "string" ? sp.search : "";
+  const page = Math.max(1, Number(searchParams.page || 1));
+  const limit = Math.min(24, Math.max(8, Number(searchParams.limit || 12)));
+  const search = typeof searchParams.search === "string" ? searchParams.search : "";
   const categoryId =
-    typeof sp.categoryId === "string" ? sp.categoryId : undefined;
+    typeof searchParams.categoryId === "string" ? searchParams.categoryId : undefined;
 
   const [categories, productRes] = await Promise.all([
     fetchCategories(),
@@ -165,23 +168,6 @@ export default async function ProductsPage({
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 via-white to-white dark:from-gray-950 dark:via-gray-950 dark:to-gray-900">
-      {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-gray-200/70 dark:border-gray-800 bg-white/80 dark:bg-gray-950/70 backdrop-blur">
-        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:opacity-80">
-            <ChevronLeft className="h-4 w-4" />
-            Back to store
-          </Link>
-
-          <div className="inline-flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
-            <LayoutGrid className="h-4 w-4" />
-            Products
-          </div>
-        </div>
-      </header>
-
       <main className="container mx-auto px-4 py-8">
         {/* Title + search */}
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
@@ -190,16 +176,15 @@ export default async function ProductsPage({
               All products
             </h1>
             <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
-              {meta?.total
-                ? `${meta.total} items`
-                : "Browse everything we have"}
+              {meta?.total ? `${meta.total} items` : "Browse everything we have"}
             </p>
           </div>
 
-          {/* Search (SSR-friendly using query params) */}
+          {/* Search */}
           <form
             action="/products"
-            className="w-full md:w-[420px] rounded-2xl border border-gray-200 dark:border-gray-800 bg-white/70 dark:bg-gray-900/30 p-2 flex items-center gap-2">
+            className="w-full md:w-[420px] rounded-2xl border border-gray-200 dark:border-gray-800 bg-white/70 dark:bg-gray-900/30 p-2 flex items-center gap-2"
+          >
             <Search className="h-4 w-4 text-gray-500" />
             <input
               name="search"
@@ -207,21 +192,18 @@ export default async function ProductsPage({
               placeholder="Search products…"
               className="w-full bg-transparent outline-none text-sm text-gray-900 dark:text-white placeholder:text-gray-400"
             />
-            {/* keep category filter when searching */}
-            {categoryId ? (
-              <input type="hidden" name="categoryId" value={categoryId} />
-            ) : null}
+            {categoryId ? <input type="hidden" name="categoryId" value={categoryId} /> : null}
             <button
               type="submit"
-              className="rounded-xl px-3 py-2 text-sm font-semibold bg-gray-900 text-white dark:bg-white dark:text-gray-900 hover:opacity-90 transition">
+              className="rounded-xl px-3 py-2 text-sm font-semibold bg-gray-900 text-white dark:bg-white dark:text-gray-900 hover:opacity-90 transition"
+            >
               Search
             </button>
           </form>
         </div>
 
-        <div
-          className={`mt-7 grid gap-6 ${hasSidebar ? "lg:grid-cols-12" : ""}`}>
-          {/* Sidebar (only if categories exist) */}
+        <div className={`mt-7 grid gap-6 ${hasSidebar ? "lg:grid-cols-12" : ""}`}>
+          {/* Sidebar */}
           {hasSidebar ? (
             <aside className="lg:col-span-3">
               <div className="sticky top-[76px] space-y-3">
@@ -242,11 +224,10 @@ export default async function ProductsPage({
                         !categoryId
                           ? "bg-gray-900 text-white dark:bg-white dark:text-gray-900"
                           : "hover:bg-white dark:hover:bg-gray-900/40 text-gray-700 dark:text-gray-200"
-                      }`}>
+                      }`}
+                    >
                       <span>All</span>
-                      <span className="text-xs opacity-80">
-                        {categories.length}
-                      </span>
+                      <span className="text-xs opacity-80">{categories.length}</span>
                     </Link>
 
                     {categories.map((c) => {
@@ -254,17 +235,13 @@ export default async function ProductsPage({
                       return (
                         <Link
                           key={c._id}
-                          href={buildUrl({
-                            page: 1,
-                            limit,
-                            search,
-                            categoryId: c._id,
-                          })}
+                          href={buildUrl({ page: 1, limit, search, categoryId: c._id })}
                           className={`flex items-center justify-between rounded-2xl px-3 py-2 text-sm transition ${
                             active
                               ? "bg-gray-900 text-white dark:bg-white dark:text-gray-900"
                               : "hover:bg-white dark:hover:bg-gray-900/40 text-gray-700 dark:text-gray-200"
-                          }`}>
+                          }`}
+                        >
                           <span className="inline-flex items-center gap-2">
                             <Tag className="h-4 w-4 opacity-70" />
                             {categoryLabel(c)}
@@ -282,7 +259,7 @@ export default async function ProductsPage({
           <section className={hasSidebar ? "lg:col-span-9" : ""}>
             {products.length ? (
               <>
-                <div className="grid gap-4 sm:gap-6 grid-cols-1 xs:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4">
+                <div className="grid gap-4 sm:gap-6 grid-cols-1 xs:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
                   {products.map((p) => (
                     <ProductCard key={p._id} p={p} />
                   ))}
@@ -297,12 +274,8 @@ export default async function ProductsPage({
                         ? "pointer-events-none opacity-50 border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-300"
                         : "border-gray-200 dark:border-gray-800 hover:bg-white dark:hover:bg-gray-900/40 text-gray-700 dark:text-gray-200"
                     }`}
-                    href={buildUrl({
-                      page: Math.max(1, page - 1),
-                      limit,
-                      search,
-                      categoryId,
-                    })}>
+                    href={buildUrl({ page: Math.max(1, page - 1), limit, search, categoryId })}
+                  >
                     <ChevronLeft className="h-4 w-4" />
                     Prev
                   </Link>
@@ -319,12 +292,8 @@ export default async function ProductsPage({
                         ? "pointer-events-none opacity-50 border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-300"
                         : "border-gray-200 dark:border-gray-800 hover:bg-white dark:hover:bg-gray-900/40 text-gray-700 dark:text-gray-200"
                     }`}
-                    href={buildUrl({
-                      page: Math.min(totalPages, page + 1),
-                      limit,
-                      search,
-                      categoryId,
-                    })}>
+                    href={buildUrl({ page: Math.min(totalPages, page + 1), limit, search, categoryId })}
+                  >
                     Next
                     <ChevronRight className="h-4 w-4" />
                   </Link>
@@ -342,7 +311,8 @@ export default async function ProductsPage({
                 <div className="mt-5 flex justify-center">
                   <Link
                     href="/products"
-                    className="rounded-2xl px-4 py-2.5 bg-gray-900 text-white dark:bg-white dark:text-gray-900 font-semibold text-sm hover:opacity-90 transition">
+                    className="rounded-2xl px-4 py-2.5 bg-gray-900 text-white dark:bg-white dark:text-gray-900 font-semibold text-sm hover:opacity-90 transition"
+                  >
                     Clear filters
                   </Link>
                 </div>
