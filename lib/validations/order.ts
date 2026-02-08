@@ -32,5 +32,5 @@ export const createOrderSchema = z.object({
 	paymentType: z.enum(['cash', 'card', 'bkash', 'nagad', 'rocket', 'bank']).optional().default('cash'),
 	status: z.enum(['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled']).optional().default('pending'),
 	remark: z.string().optional(),
-	createdById: z.string().optional(),
+	createdById: z.string().min(1).optional()
 });

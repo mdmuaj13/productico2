@@ -47,7 +47,6 @@ export default function CartClient() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 via-white to-white dark:from-gray-950 dark:via-gray-950 dark:to-gray-900">
-
       <main className="container mx-auto px-4 py-8">
         <div className="grid gap-8 lg:grid-cols-12">
           {/* Items */}
@@ -59,7 +58,9 @@ export default function CartClient() {
                     Your cart
                   </h1>
                   <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
-                    {totals.count ? `${totals.count} item(s)` : "Your cart is empty."}
+                    {totals.count
+                      ? `${totals.count} item(s)`
+                      : "Your cart is empty."}
                   </p>
                 </div>
 
@@ -69,8 +70,7 @@ export default function CartClient() {
                       clearCart();
                       setItems([]);
                     }}
-                    className="text-sm font-semibold text-gray-700 dark:text-gray-200 hover:opacity-80"
-                  >
+                    className="text-sm font-semibold text-gray-700 dark:text-gray-200 hover:opacity-80">
                     Clear cart
                   </button>
                 ) : null}
@@ -81,8 +81,7 @@ export default function CartClient() {
                   {items.map((it) => (
                     <div
                       key={it.productId}
-                      className="flex gap-4 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white/70 dark:bg-gray-950/20 p-4"
-                    >
+                      className="flex gap-4 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white/70 dark:bg-gray-950/20 p-4">
                       <div className="h-20 w-20 rounded-2xl overflow-hidden bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-800 shrink-0">
                         {it.image ? (
                           <img
@@ -100,14 +99,18 @@ export default function CartClient() {
 
                       <div className="min-w-0 flex-1">
                         <Link
-                          href={it.slug ? `/p/${encodeURIComponent(it.slug)}` : `/product/${it.productId}`}
-                          className="font-semibold text-gray-900 dark:text-white hover:opacity-80 line-clamp-1"
-                        >
+                          href={
+                            it.slug
+                              ? `/products/${encodeURIComponent(it.slug)}`
+                              : `/product/${it.productId}`
+                          }
+                          className="font-semibold text-gray-900 dark:text-white hover:opacity-80 line-clamp-1">
                           {it.title}
                         </Link>
 
                         <div className="mt-1 text-xs text-gray-500">
-                          Unit price: {formatMoney(it.price)} {it.unit ? ` • ${it.unit}` : ""}
+                          Unit price: {formatMoney(it.price)}{" "}
+                          {it.unit ? ` • ${it.unit}` : ""}
                         </div>
 
                         <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
@@ -117,8 +120,7 @@ export default function CartClient() {
                               type="button"
                               onClick={() => dec(it.productId, it.qty)}
                               className="h-10 w-10 grid place-items-center hover:bg-gray-50 dark:hover:bg-gray-900/40 transition"
-                              aria-label="Decrease quantity"
-                            >
+                              aria-label="Decrease quantity">
                               <Minus className="h-4 w-4" />
                             </button>
 
@@ -130,8 +132,7 @@ export default function CartClient() {
                               type="button"
                               onClick={() => inc(it.productId, it.qty)}
                               className="h-10 w-10 grid place-items-center hover:bg-gray-50 dark:hover:bg-gray-900/40 transition"
-                              aria-label="Increase quantity"
-                            >
+                              aria-label="Increase quantity">
                               <Plus className="h-4 w-4" />
                             </button>
                           </div>
@@ -146,8 +147,7 @@ export default function CartClient() {
                                 setItems(getCart());
                               }}
                               className="inline-flex items-center gap-2 rounded-2xl px-3 py-2 text-sm border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900/40 transition"
-                              aria-label="Remove"
-                            >
+                              aria-label="Remove">
                               <Trash2 className="h-4 w-4" />
                               Remove
                             </button>
@@ -171,8 +171,7 @@ export default function CartClient() {
                   <div className="mt-5">
                     <Link
                       href="/products"
-                      className="rounded-2xl px-5 py-3 bg-gray-900 text-white dark:bg-white dark:text-gray-900 font-semibold text-sm hover:opacity-90 transition inline-flex items-center gap-2"
-                    >
+                      className="rounded-2xl px-5 py-3 bg-gray-900 text-white dark:bg-white dark:text-gray-900 font-semibold text-sm hover:opacity-90 transition inline-flex items-center gap-2">
                       Go to products
                       <BadgeCheck className="h-4 w-4 opacity-80" />
                     </Link>
@@ -193,7 +192,9 @@ export default function CartClient() {
                 <div className="mt-4 space-y-2 text-sm">
                   <div className="flex items-center justify-between text-gray-700 dark:text-gray-200">
                     <span>Subtotal</span>
-                    <span className="font-semibold">{formatMoney(totals.subtotal)}</span>
+                    <span className="font-semibold">
+                      {formatMoney(totals.subtotal)}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between text-gray-500">
                     <span>Delivery</span>
@@ -217,15 +218,13 @@ export default function CartClient() {
                       items.length
                         ? "bg-gray-900 text-white dark:bg-white dark:text-gray-900 hover:opacity-90"
                         : "pointer-events-none opacity-50 bg-gray-300 text-gray-700 dark:bg-gray-800 dark:text-gray-300"
-                    }`}
-                  >
+                    }`}>
                     Proceed to checkout
                   </Link>
 
                   <Link
                     href="/products"
-                    className="rounded-2xl px-5 py-3 font-semibold text-sm text-center border border-gray-200 dark:border-gray-800 hover:bg-white dark:hover:bg-gray-900/40 transition"
-                  >
+                    className="rounded-2xl px-5 py-3 font-semibold text-sm text-center border border-gray-200 dark:border-gray-800 hover:bg-white dark:hover:bg-gray-900/40 transition">
                     Continue shopping
                   </Link>
                 </div>

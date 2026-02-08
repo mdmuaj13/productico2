@@ -8,9 +8,8 @@ export default function ProductCard({ p }: { p: Product }) {
 
   return (
     <Link
-      href={p.slug ? `/p/${encodeURIComponent(p.slug)}` : "#"}
-      className="group rounded-2xl border border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/40 overflow-hidden hover:shadow-md transition"
-    >
+      href={p.slug ? `/products/${encodeURIComponent(p.slug)}` : "#"}
+      className="group rounded-2xl border border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/40 overflow-hidden hover:shadow-md transition">
       <div className="aspect-[4/3] bg-gray-100 dark:bg-gray-800 overflow-hidden">
         {img ? (
           <img
