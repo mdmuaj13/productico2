@@ -12,4 +12,15 @@ const r2Client = new S3Client({
 export const R2_BUCKET_NAME = process.env.R2_BUCKET_NAME!;
 export const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL!;
 
+export function isUrl(value?: string) {
+	if (!value) return false
+	try {
+	  new URL(value)
+	  return true
+	} catch {
+	  return false
+	}
+  }
+  
+
 export default r2Client;

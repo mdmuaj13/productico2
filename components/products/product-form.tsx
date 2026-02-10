@@ -1,25 +1,21 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import {
-	SheetHeader,
-	SheetTitle,
-	SheetDescription,
-	SheetFooter,
-	SheetClose,
-} from '@/components/ui/sheet'
-import { Plus, X } from "lucide-react"
-import { CreateProductData } from "@/lib/validations/product"
-import { createProduct } from "@/hooks/products"
-import { useApi } from "@/lib/api"
-import { toast } from "sonner"
+import React, { useEffect, useMemo, useState } from "react"
 import slugify from "slugify"
+import { toast } from "sonner"
+import { Loader2 } from "lucide-react"
+
+import { Button } from "@/components/ui/button"
+import { SheetHeader, SheetTitle, SheetDescription, SheetFooter, SheetClose } from "@/components/ui/sheet"
+
+import { CreateProductData } from "@/lib/validations/product"
+import { useApi } from "@/lib/api"
+import { uploadImagesToR2 } from "@/lib/upload"
+import { createProduct } from "@/hooks/products"
+import type { PreviewItem } from "../image-uploader"
+import { ProductVariantsSection, Variant } from "./product-variants-section"
+import { ProductImagesSection } from "./product-images-section"
+import { ProductBasicFields } from "./product-basic-fields"
 
 interface Category {
   _id: string
@@ -27,277 +23,201 @@ interface Category {
   slug: string
 }
 
-interface Variant {
-  name: string
-  price: number
-  salePrice?: number
-}
-
 interface ProductFormProps {
   initialData?: Partial<CreateProductData>
   onSuccess?: () => void
 }
 
-export function ProductForm({ onSuccess }: ProductFormProps) {
+export function ProductForm({ onSuccess, initialData }: ProductFormProps) {
   const [isLoading, setIsLoading] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
+
   const [formData, setFormData] = useState({
-    title: "",
-    slug: "",
-    description: "",
-    shortDetail: "",
-    price: 0,
-    salePrice: undefined as number | undefined,
-    unit: "piece",
-    categoryId: "",
-    variants: [] as Variant[],
+    title: initialData?.title ?? "",
+    slug: initialData?.slug ?? "",
+    description: initialData?.description ?? "",
+    shortDetail: initialData?.shortDetail ?? "",
+    price: initialData?.price ?? 0,
+    salePrice: initialData?.salePrice,
+    unit: initialData?.unit ?? "piece",
+    categoryId: (initialData as any)?.categoryId ?? "",
+    variants: (initialData?.variants as Variant[]) ?? [],
+    thumbnail: (initialData?.thumbnail as string) ?? "",
+    images: (initialData?.images as string[]) ?? [],
+    tags: (initialData?.tags as string[]) ?? [],
   })
 
-  const [newVariant, setNewVariant] = useState<Variant>({ name: "", price: 0 })
+  const [thumbPreview, setThumbPreview] = useState<PreviewItem[]>([])
+  const [imagePreviews, setImagePreviews] = useState<PreviewItem[]>([])
 
-  const { data: categoriesData } = useApi('/api/categories')
-  const categories = categoriesData?.data || []
+  const { data: categoriesData } = useApi("/api/categories")
+  const categories: Category[] = categoriesData?.data || []
+
+  const isBusy = isLoading || isUploading
+
+  const canSubmit = useMemo(() => {
+    if (isBusy) return false
+    if (!formData.title.trim()) return false
+    if (!formData.slug.trim()) return false
+    if (!formData.categoryId) return false
+    if (formData.price <= 0) return false
+    return true
+  }, [formData, isBusy])
 
   useEffect(() => {
-    if (formData.title) {
-      setFormData(prev => ({
-        ...prev,
-        slug: slugify(prev.title, { lower: true, strict: true })
-      }))
-    }
+    if (!formData.title) return
+    setFormData((prev) => ({
+      ...prev,
+      slug: prev.slug?.trim()
+        ? prev.slug
+        : slugify(prev.title, { lower: true, strict: true }),
+    }))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.title])
+
+  const cleanupPreviews = () => {
+    for (const p of thumbPreview) URL.revokeObjectURL(p.url)
+    for (const p of imagePreviews) URL.revokeObjectURL(p.url)
+    setThumbPreview([])
+    setImagePreviews([])
+  }
+
+  const resetForm = () => {
+    setFormData({
+      title: "",
+      slug: "",
+      description: "",
+      shortDetail: "",
+      price: 0,
+      salePrice: undefined,
+      unit: "piece",
+      categoryId: "",
+      variants: [],
+      thumbnail: "",
+      images: [],
+      tags: [],
+    })
+    cleanupPreviews()
+  }
+
+  async function uploadSelectedImages() {
+    setIsUploading(true)
+    try {
+      let thumbnailKey = ""
+      if (thumbPreview.length > 0) {
+        const [key] = await uploadImagesToR2({
+          files: [thumbPreview[0].file],
+          folder: "products",
+        })
+        thumbnailKey = key || ""
+      }
+
+      let imageKeys: string[] = []
+      if (imagePreviews.length > 0) {
+        imageKeys = await uploadImagesToR2({
+          files: imagePreviews.map((p) => p.file),
+          folder: "products",
+        })
+      }
+
+      return { thumbnailKey, imageKeys }
+    } finally {
+      setIsUploading(false)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    if (!canSubmit) {
+      if (!formData.title.trim()) return toast.error("Title is required")
+      if (!formData.slug.trim()) return toast.error("Slug is required")
+      if (!formData.categoryId) return toast.error("Category is required")
+      if (formData.price <= 0) return toast.error("Price must be greater than 0")
+      return
+    }
+
     setIsLoading(true)
-
     try {
-      await createProduct(formData as CreateProductData)
-      toast.success('Product created successfully')
-      // Reset form
-      setFormData({
-        title: "",
-        slug: "",
-        description: "",
-        shortDetail: "",
-        price: 0,
-        salePrice: undefined as number | undefined,
-        unit: "piece",
-        categoryId: "",
-        variants: [] as Variant[],
-      })
-      setNewVariant({ name: "", price: 0 })
+      const { thumbnailKey, imageKeys } = await uploadSelectedImages()
 
+      const base = process.env.NEXT_PUBLIC_R2_PUBLIC_URL
+      const toR2Url = (key: string) => {
+        if (!base) return key
+        return `${base.replace(/\/$/, "")}/${key.replace(/^\//, "")}`
+      }
+
+      const finalImages = imageKeys.map(toR2Url)
+      const finalThumbnail = thumbnailKey ? toR2Url(thumbnailKey) : finalImages[0] || ""
+
+      const payload: CreateProductData = {
+        ...(formData as unknown as CreateProductData),
+        thumbnail: finalThumbnail,
+        images: finalImages,
+      }
+
+      await createProduct(payload)
+      toast.success("Product created successfully")
+      resetForm()
       onSuccess?.()
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to create product'
-      )
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to create product")
     } finally {
       setIsLoading(false)
     }
-  }
-
-  const addVariant = () => {
-    if (newVariant.name.trim() && newVariant.price > 0) {
-      setFormData(prev => ({
-        ...prev,
-        variants: [...prev.variants, { ...newVariant }]
-      }))
-      setNewVariant({ name: "", price: 0 })
-    }
-  }
-
-  const removeVariant = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      variants: prev.variants.filter((_, i) => i !== index)
-    }))
   }
 
   return (
     <div className="flex flex-col h-full">
       <SheetHeader className="px-4 pb-4">
         <SheetTitle>Create Product</SheetTitle>
-        <SheetDescription>
-          Add a new product to your inventory system.
-        </SheetDescription>
+        <SheetDescription>Add a new product to your inventory system.</SheetDescription>
       </SheetHeader>
 
-      <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-4 space-y-4 pb-4">
-        <div className="space-y-2">
-          <Label htmlFor="title">Title *</Label>
-          <Input
-            id="title"
-            value={formData.title}
-            onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-            required
-          />
-        </div>
+      <form
+        id="product-form"
+        onSubmit={handleSubmit}
+        className="flex-1 overflow-y-auto px-4 space-y-4 pb-4"
+      >
+        <ProductImagesSection
+          isBusy={isBusy}
+          isUploading={isUploading}
+          thumbPreview={thumbPreview}
+          setThumbPreview={setThumbPreview}
+          imagePreviews={imagePreviews}
+          setImagePreviews={setImagePreviews}
+        />
 
-        <div className="space-y-2">
-          <Label htmlFor="slug">Slug *</Label>
-          <Input
-            id="slug"
-            value={formData.slug}
-            onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value }))}
-            required
-          />
-        </div>
+        <ProductBasicFields
+          isBusy={isBusy}
+          formData={formData}
+          setFormData={setFormData}
+          categories={categories}
+        />
 
-        <div className="space-y-2">
-          <Label htmlFor="categoryId">Category *</Label>
-          <Select
-            value={formData.categoryId}
-            onValueChange={(value) => setFormData(prev => ({ ...prev, categoryId: value }))}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select category" />
-            </SelectTrigger>
-            <SelectContent>
-              {categories.map((category: Category) => (
-                <SelectItem key={category._id} value={category._id}>
-                  {category.title}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="shortDetail">Short Detail</Label>
-          <Textarea
-            id="shortDetail"
-            value={formData.shortDetail}
-            onChange={(e) => setFormData(prev => ({ ...prev, shortDetail: e.target.value }))}
-            rows={3}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="description">Description</Label>
-          <Textarea
-            id="description"
-            value={formData.description}
-            onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-            rows={4}
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="price">Price *</Label>
-            <Input
-              id="price"
-              type="number"
-              value={formData.price}
-              onChange={(e) => setFormData(prev => ({ ...prev, price: Number(e.target.value) }))}
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="salePrice">Sale Price</Label>
-            <Input
-              id="salePrice"
-              type="number"
-              value={formData.salePrice || ""}
-              onChange={(e) => setFormData(prev => ({
-                ...prev,
-                salePrice: e.target.value ? Number(e.target.value) : undefined
-              }))}
-            />
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="unit">Unit</Label>
-          <Input
-            id="unit"
-            value={formData.unit}
-            onChange={(e) => setFormData(prev => ({ ...prev, unit: e.target.value }))}
-          />
-        </div>
-
-      {/* Variants */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Variants</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="space-y-3">
-              <div className="space-y-2">
-                <Label>Variant Name</Label>
-                <Input
-                  placeholder="e.g., Small, Medium, Large"
-                  value={newVariant.name}
-                  onChange={(e) => setNewVariant(prev => ({ ...prev, name: e.target.value }))}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Price</Label>
-                  <Input
-                    placeholder="0.00"
-                    type="number"
-                    value={newVariant.price}
-                    onChange={(e) => setNewVariant(prev => ({ ...prev, price: Number(e.target.value) }))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Sale Price</Label>
-                  <Input
-                    placeholder="0.00"
-                    type="number"
-                    value={newVariant.salePrice || ""}
-                    onChange={(e) => setNewVariant(prev => ({
-                      ...prev,
-                      salePrice: e.target.value ? Number(e.target.value) : undefined
-                    }))}
-                  />
-                </div>
-              </div>
-              <Button type="button" onClick={addVariant} className="w-full">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Variant
-              </Button>
-            </div>
-            {formData.variants.length > 0 && (
-              <div className="space-y-2">
-                <Label>Added Variants</Label>
-                <div className="space-y-2">
-                  {formData.variants.map((variant, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 border rounded-lg bg-muted/50">
-                      <span className="text-sm">
-                        <span className="font-medium">{variant.name}</span> - ${variant.price}
-                        {variant.salePrice && <span className="text-muted-foreground"> (Sale: ${variant.salePrice})</span>}
-                      </span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeVariant(index)}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
+        <ProductVariantsSection
+          isBusy={isBusy}
+          variants={formData.variants}
+          setVariants={(next) => setFormData((p) => ({ ...p, variants: next }))}
+        />
       </form>
 
       <SheetFooter className="gap-2 px-4 py-4 border-t">
         <SheetClose asChild>
-          <Button type="button" variant="outline" disabled={isLoading}>
+          <Button type="button" variant="outline" disabled={isBusy}>
             Cancel
           </Button>
         </SheetClose>
-        <Button type="submit" disabled={isLoading} onClick={handleSubmit}>
-          {isLoading ? 'Creating...' : 'Create Product'}
+
+        <Button type="submit" form="product-form" disabled={!canSubmit}>
+          {isBusy ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              {isUploading ? "Uploading..." : "Creating..."}
+            </>
+          ) : (
+            "Create Product"
+          )}
         </Button>
       </SheetFooter>
     </div>
