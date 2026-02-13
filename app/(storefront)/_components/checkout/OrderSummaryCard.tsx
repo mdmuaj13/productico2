@@ -10,12 +10,19 @@ function formatMoney(n: number) {
 export function OrderSummaryCard({
   items,
   subtotal,
+  discount = 0,
+  total,
   compact,
 }: {
   items: CartItem[];
   subtotal: number;
-  compact?: boolean; // if you want smaller padding on mobile
+  discount?: number; // ✅ new
+  total?: number;    // ✅ new (final payable)
+  compact?: boolean;
 }) {
+  const payableTotal =
+    typeof total === "number" ? total : Math.max(0, subtotal - discount);
+
   return (
     <div
       className={`rounded-3xl border border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/30 shadow-sm ${
@@ -61,6 +68,15 @@ export function OrderSummaryCard({
           <span>Subtotal</span>
           <span className="font-semibold">{formatMoney(subtotal)}</span>
         </div>
+
+        {/* ✅ show discount only when applied */}
+        {discount > 0 ? (
+          <div className="flex items-center justify-between text-gray-700 dark:text-gray-200">
+            <span>Discount</span>
+            <span className="font-semibold">- {formatMoney(discount)}</span>
+          </div>
+        ) : null}
+
         <div className="flex items-center justify-between text-gray-500">
           <span>Delivery</span>
           <span>Cash on delivery</span>
@@ -71,7 +87,7 @@ export function OrderSummaryCard({
             Total
           </span>
           <span className="text-lg font-bold text-gray-900 dark:text-white">
-            {formatMoney(subtotal)}
+            {formatMoney(payableTotal)}
           </span>
         </div>
       </div>

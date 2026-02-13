@@ -39,6 +39,9 @@ export function NavMain({
 		if (url === '/app/products' && pathname.startsWith('/app/products')) {
 			return true;
 		}
+		if (url === '/app/discounts' && pathname.startsWith('/app/discounts')) {
+			return true;
+		}
 		if (url === '/app/categories' && pathname.startsWith('/app/categories')) {
 			return true;
 		}

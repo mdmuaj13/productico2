@@ -16,6 +16,7 @@ import {
 	IconBuilding,
 	IconFileInvoice,
 	IconReceipt,
+	IconDiscount,
 } from '@tabler/icons-react';
 
 import { NavDocuments } from '@/components/nav-documents';
@@ -48,6 +49,11 @@ const data = {
 			title: 'Products',
 			url: '/app/products',
 			icon: IconPackage,
+		},
+		{
+			title: 'Discounts',
+			url: '/app/discounts',
+			icon: IconDiscount,
 		},
 		{
 			title: 'Categories',
