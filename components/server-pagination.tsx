@@ -45,85 +45,88 @@ export function ServerPagination({
   const canNext = safePage < safeTotalPages;
 
   return (
-    <div className={cn("flex flex-col gap-4 px-2 sm:px-4", className)}>
-      <div className="flex items-center justify-between gap-3">
-        <div className="text-sm text-muted-foreground">
-          Showing {typeof showingCount === "number" ? showingCount : "—"} of {total} results
-        </div>
-
-        {/* Page size (hide on mobile if you want) */}
-        {onLimitChange ? (
-          <div className="hidden sm:flex items-center gap-2">
-            <Label className="text-sm font-medium">Rows</Label>
-            <Select
-              value={`${limit}`}
-              onValueChange={(v) => {
-                const next = Number(v);
-                if (!Number.isFinite(next)) return;
-                onLimitChange(next);
-              }}
-            >
-              <SelectTrigger className="w-24 h-9">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent side="top">
-                {pageSizeOptions.map((size) => (
-                  <SelectItem key={size} value={`${size}`}>
-                    {size}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        ) : null}
+    <div
+      className={cn(
+        "flex items-center gap-3 px-2 sm:px-4 overflow-x-auto whitespace-nowrap",
+        className
+      )}
+    >
+      <div className="text-xs sm:text-sm text-muted-foreground">
+        <span className="hidden sm:inline">Showing </span>
+        {typeof showingCount === "number" ? showingCount : "—"}
+        <span className="hidden sm:inline"> of {total} results</span>
+        <span className="sm:hidden"> / {total}</span>
       </div>
 
-      <div className="flex items-center justify-between sm:justify-end gap-3">
-        <div className="text-sm font-medium sm:mr-6">
-          Page {safePage} of {safeTotalPages}
-        </div>
-
+      {onLimitChange ? (
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            className="hidden sm:inline-flex h-9 w-9 p-0"
-            onClick={() => onPageChange(1)}
-            disabled={!canPrev}
-            aria-label="First page"
+          <Label className="hidden sm:inline text-sm font-medium">Rows</Label>
+          <Select
+            value={`${limit}`}
+            onValueChange={(v) => {
+              const next = Number(v);
+              if (!Number.isFinite(next)) return;
+              onLimitChange(next);
+            }}
           >
-            <IconChevronsLeft />
-          </Button>
-
-          <Button
-            variant="outline"
-            className="h-9 w-9 p-0"
-            onClick={() => onPageChange(safePage - 1)}
-            disabled={!canPrev}
-            aria-label="Previous page"
-          >
-            <IconChevronLeft />
-          </Button>
-
-          <Button
-            variant="outline"
-            className="h-9 w-9 p-0"
-            onClick={() => onPageChange(safePage + 1)}
-            disabled={!canNext}
-            aria-label="Next page"
-          >
-            <IconChevronRight />
-          </Button>
-
-          <Button
-            variant="outline"
-            className="hidden sm:inline-flex h-9 w-9 p-0"
-            onClick={() => onPageChange(safeTotalPages)}
-            disabled={!canNext}
-            aria-label="Last page"
-          >
-            <IconChevronsRight />
-          </Button>
+            <SelectTrigger className="w-20 h-8">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent side="top">
+              {pageSizeOptions.map((size) => (
+                <SelectItem key={size} value={`${size}`}>
+                  {size}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
+      ) : null}
+
+      <div className="text-xs sm:text-sm font-medium sm:ml-auto">
+        Page {safePage} of {safeTotalPages}
+      </div>
+
+      <div className="flex items-center gap-1.5">
+        <Button
+          variant="outline"
+          className="hidden sm:inline-flex h-8 w-8 p-0"
+          onClick={() => onPageChange(1)}
+          disabled={!canPrev}
+          aria-label="First page"
+        >
+          <IconChevronsLeft />
+        </Button>
+
+        <Button
+          variant="outline"
+          className="h-8 w-8 p-0"
+          onClick={() => onPageChange(safePage - 1)}
+          disabled={!canPrev}
+          aria-label="Previous page"
+        >
+          <IconChevronLeft />
+        </Button>
+
+        <Button
+          variant="outline"
+          className="h-8 w-8 p-0"
+          onClick={() => onPageChange(safePage + 1)}
+          disabled={!canNext}
+          aria-label="Next page"
+        >
+          <IconChevronRight />
+        </Button>
+
+        <Button
+          variant="outline"
+          className="hidden sm:inline-flex h-8 w-8 p-0"
+          onClick={() => onPageChange(safeTotalPages)}
+          disabled={!canNext}
+          aria-label="Last page"
+        >
+          <IconChevronsRight />
+        </Button>
       </div>
     </div>
   );
