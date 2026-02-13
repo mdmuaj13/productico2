@@ -274,6 +274,8 @@ function printInvoice(order: Order) {
 export function OrderView({ order, onEdit }: OrderViewProps) {
   const dueIsPositive = order.due > 0;
 
+  console.log({order})
+
   return (
     <div className="h-full overflow-y-auto pb-6 px-2 md:px-6">
       {/* Header */}

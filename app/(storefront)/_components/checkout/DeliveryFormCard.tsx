@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { Info, Truck } from "lucide-react";
 
 type FormState = {
@@ -7,6 +8,7 @@ type FormState = {
   phone: string;
   email: string;
   address: string;
+  city: string; // ✅ added
   notes: string;
 };
 
@@ -69,17 +71,29 @@ export function DeliveryFormCard({
           />
         </label>
 
+        {/* ✅ City / District */}
+        <label className="space-y-1 sm:col-span-2">
+          <div className="text-xs font-semibold text-gray-700 dark:text-gray-200">
+            City / District <span className="text-red-500">*</span>
+          </div>
+          <input
+            value={form.city}
+            onChange={(e) => setForm((s) => ({ ...s, city: e.target.value }))}
+            className="w-full rounded-2xl border border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-950/20 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-gray-900/10 dark:focus:ring-white/10"
+            placeholder="e.g. Dhaka"
+            autoComplete="address-level2"
+          />
+        </label>
+
         <label className="space-y-1 sm:col-span-2">
           <div className="text-xs font-semibold text-gray-700 dark:text-gray-200">
             Full address <span className="text-red-500">*</span>
           </div>
           <textarea
             value={form.address}
-            onChange={(e) =>
-              setForm((s) => ({ ...s, address: e.target.value }))
-            }
+            onChange={(e) => setForm((s) => ({ ...s, address: e.target.value }))}
             className="w-full min-h-[120px] rounded-2xl border border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-950/20 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-gray-900/10 dark:focus:ring-white/10"
-            placeholder="House, Road, Area, City"
+            placeholder="House, Road, Area"
             autoComplete="street-address"
           />
         </label>
@@ -99,8 +113,7 @@ export function DeliveryFormCard({
         <div className="sm:col-span-2 mt-1 flex items-start gap-2 rounded-2xl border border-gray-200 dark:border-gray-800 bg-gray-50/70 dark:bg-gray-950/20 p-3">
           <Info className="h-4 w-4 mt-0.5 text-gray-500" />
           <p className="text-xs text-gray-600 dark:text-gray-300">
-            Make sure your phone number is correct. We may call to confirm
-            delivery.
+            Make sure your phone number is correct. We may call to confirm delivery.
           </p>
         </div>
       </div>

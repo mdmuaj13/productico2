@@ -72,11 +72,6 @@ function computeDiscountAmount(subtotal: number, discount?: DiscountDoc | null) 
   return clamp(amount, 0, subtotal);
 }
 
-function formatMoney(n: number) {
-  // adjust if you have currency formatting util already
-  return Math.round(n).toString();
-}
-
 export default function CheckoutClient() {
   const router = useRouter();
   const [items, setItems] = useState<CartItem[]>([]);
@@ -87,12 +82,13 @@ export default function CheckoutClient() {
     phone: "",
     email: "",
     address: "",
+    city: "", // ✅ required by publicOrderSchema
     notes: "",
   });
 
   const [paymentType, setPaymentType] = useState<PaymentType>("cash");
 
-  // Voucher state
+  // Voucher UI state (client-side preview only)
   const [voucherInput, setVoucherInput] = useState("");
   const [discount, setDiscount] = useState<DiscountDoc | null>(null);
   const [discountLoading, setDiscountLoading] = useState(false);
@@ -122,7 +118,19 @@ export default function CheckoutClient() {
     !!form.name.trim() &&
     !!form.phone.trim() &&
     !!form.address.trim() &&
+    !!form.city.trim() &&
     !loading;
+
+  // Helper to safely extract a variant name from cart item
+  function getVariantName(it: any): string | undefined {
+    const v1 = it?.variantName;
+    const v2 = it?.variant?.name;
+    const v3 = it?.selectedVariant?.name;
+
+    const candidate = typeof v1 === "string" ? v1 : typeof v2 === "string" ? v2 : typeof v3 === "string" ? v3 : "";
+    const cleaned = candidate?.trim();
+    return cleaned ? cleaned : undefined;
+  }
 
   async function applyVoucher() {
     const raw = voucherInput.trim();
@@ -181,33 +189,45 @@ export default function CheckoutClient() {
   async function placeOrder() {
     if (!items.length) return;
 
-    if (!form.name.trim() || !form.phone.trim() || !form.address.trim()) {
-      alert("Please fill Name, Phone and Address.");
+    if (!form.name.trim() || !form.phone.trim() || !form.address.trim() || !form.city.trim()) {
+      alert("Please fill Name, Phone, Address and City.");
       return;
     }
 
-    const safePaymentType: PaymentType = "cash";
-
     setLoading(true);
     try {
-      const res = await fetch("/api/checkout", {
+      // ✅ Use your public order route instead of /api/public/orders
+      const res = await fetch("/api/public/orders", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          customer: form,
-          items,
-          discount: discount
-            ? { id: discount._id, code: discount.code, amount: discountAmount }
-            : null,
-          totals: { ...totals, discount: discountAmount, total: payableTotal },
-          paymentType: safePaymentType,
+          name: form.name.trim(),
+          email: form.email?.trim() || "",
+          phone: form.phone.trim(),
+          address: form.address.trim(),
+          city: form.city.trim(), // ✅ required
+
+          // publicOrderSchema expects string or undefined (not null)
+          discountCode: voucherInput.trim() ? voucherInput.trim().toUpperCase() : undefined,
+
+          items: items.map((it: any) => {
+            const variantName = getVariantName(it);
+
+            return {
+              productId: String(it.productId),
+              quantity: Number(it.qty),
+
+              // ✅ only include if string
+              ...(variantName ? { variantName } : {}),
+            };
+          }),
         }),
       });
 
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        alert(data?.error || "Checkout failed");
+        alert(data?.message || data?.error || "Checkout failed");
         console.log(data);
         return;
       }
@@ -220,7 +240,6 @@ export default function CheckoutClient() {
     }
   }
 
-  // ✅ Reusable Voucher UI: render it right below OrderSummaryCard everywhere
   const VoucherSection = (
     <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-950">
       <div className="flex items-start justify-between gap-3">
@@ -229,17 +248,17 @@ export default function CheckoutClient() {
             Voucher / Discount
           </h3>
           <p className="mt-1 text-xs text-gray-600 dark:text-gray-300">
-            Enter your voucher code (or discount id).
+            Enter your voucher code.
           </p>
         </div>
 
-        {discount ? (
+        {voucherInput.trim() ? (
           <button
             onClick={removeVoucher}
             className="text-xs font-semibold text-gray-700 hover:opacity-80 dark:text-gray-200"
             type="button"
           >
-            Remove
+            Clear
           </button>
         ) : null}
       </div>
@@ -248,7 +267,7 @@ export default function CheckoutClient() {
         <input
           value={voucherInput}
           onChange={(e) => setVoucherInput(e.target.value)}
-          placeholder="e.g. SAVE10 (or 65f1...)"
+          placeholder="e.g. SAVE10"
           className="h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-gray-900/10 dark:border-gray-800 dark:bg-gray-950 dark:text-white dark:focus:ring-white/10"
         />
         <button
@@ -275,7 +294,8 @@ export default function CheckoutClient() {
     <div className="min-h-screen bg-linear-to-b from-gray-50 via-white to-white dark:from-gray-950 dark:via-gray-950 dark:to-gray-900">
       <CheckoutHeader />
 
-      <main className="container mx-auto px-4 py-6">
+      {/* ✅ add bottom padding so fixed mobile bar never overlaps content */}
+      <main className="container mx-auto px-4 py-6 pb-28 lg:pb-6">
         <div className="mb-5">
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white">
             Checkout
@@ -287,23 +307,35 @@ export default function CheckoutClient() {
 
         <div className="grid gap-8 lg:grid-cols-12">
           <section className="lg:col-span-7 space-y-6">
+            {/* ✅ DeliveryFormCard must support city now */}
             <DeliveryFormCard form={form} setForm={setForm} />
 
-            {/* ✅ Mobile summary + voucher under it */}
+            {/* ✅ Mobile summary + voucher below summary */}
             <div className="lg:hidden space-y-4">
-              <OrderSummaryCard items={items} discount={discountAmount} subtotal={totals.subtotal}  total={payableTotal} />
+              <OrderSummaryCard
+                items={items}
+                subtotal={totals.subtotal}
+                discount={discountAmount}
+                total={payableTotal}
+              />
               {VoucherSection}
             </div>
           </section>
 
           <aside className="lg:col-span-5">
-            <div className="lg:sticky lg:top-[76px] space-y-4">
+            <div className="space-y-4">
               <PaymentMethodCard paymentType={paymentType} setPaymentType={setPaymentType} />
 
-              {/* ✅ Desktop summary + voucher under it */}
+              {/* ✅ Desktop summary + voucher below summary */}
               <div className="hidden lg:block space-y-4">
-                <OrderSummaryCard items={items} discount={discountAmount} subtotal={totals.subtotal}  total={payableTotal} />
+                <OrderSummaryCard
+                  items={items}
+                  subtotal={totals.subtotal}
+                  discount={discountAmount}
+                  total={payableTotal}
+                />
                 {VoucherSection}
+
                 <button
                   onClick={placeOrder}
                   disabled={!canPlace}
@@ -317,8 +349,9 @@ export default function CheckoutClient() {
                 </button>
               </div>
 
+              {/* ✅ mobile fixed bar should be fixed in its component */}
               <MobileStickyBar
-                total={payableTotal} // ✅ discounted total
+                total={payableTotal}
                 canPlace={canPlace}
                 loading={loading}
                 onPlace={placeOrder}
