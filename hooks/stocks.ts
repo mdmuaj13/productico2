@@ -102,3 +102,63 @@ export const adjustStock = async (id: string, data: {
 		body: JSON.stringify(data),
 	});
 };
+
+// New hooks for stock summary view
+
+export interface WarehouseStock {
+	stockId: string;
+	warehouseId: string;
+	warehouseName: string;
+	quantity: number;
+	reorderPoint: number;
+	isLowStock: boolean;
+}
+
+export interface VariantStock {
+	variantName: string | null;
+	totalStock: number;
+	warehouses: WarehouseStock[];
+}
+
+export interface ProductStockSummary {
+	productId: string;
+	product: {
+		_id: string;
+		title: string;
+		thumbnail?: string;
+		variants: Variant[];
+	};
+	totalStock: number;
+	variantCount: number;
+	warehouseCount: number;
+	hasLowStock: boolean;
+	hasOutOfStock: boolean;
+	variants: VariantStock[];
+}
+
+export interface StockSummaryResponse {
+	products: ProductStockSummary[];
+	stats: {
+		totalProducts: number;
+		lowStockCount: number;
+		outOfStockCount: number;
+	};
+}
+
+export const useStockSummary = () => {
+	return useApi('/api/stocks/summary');
+};
+
+export const quickAdjustStock = async (
+	stockId: string,
+	data: {
+		operation: 'add' | 'deduct';
+		quantity: number;
+		notes?: string;
+	}
+) => {
+	return apiCall(`/api/stocks/${stockId}/quick-adjust`, {
+		method: 'PATCH',
+		body: JSON.stringify(data),
+	});
+};

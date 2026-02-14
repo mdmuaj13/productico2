@@ -20,6 +20,7 @@ interface IProduct {
 	tags: string[];
 	categoryId: mongoose.Types.ObjectId;
 	variants: IVariant[];
+	totalStock: number;
 	createdAt: Date;
 	updatedAt: Date;
 	deletedAt?: Date;
@@ -45,6 +46,7 @@ const productSchema = new Schema<IProduct>(
 		tags: [{ type: String }],
 		categoryId: { type: Schema.Types.ObjectId, ref: 'Category', required: true },
 		variants: [variantSchema],
+		totalStock: { type: Number, default: 0 }, // Synced from Stock collection
 		deletedAt: { type: Date, default: null },
 	},
 	{
