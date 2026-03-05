@@ -22,7 +22,7 @@ export function FeatureItem({
 }: {
   icon: React.ComponentType<{ className?: string }>;
   title: string;
-  desc: string;
+  desc?: string;
 }) {
   return (
     <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white/60 dark:bg-gray-900/35 p-4">
@@ -31,7 +31,7 @@ export function FeatureItem({
           <Icon className="h-5 w-5 text-gray-700 dark:text-gray-200" />
         </div>
         <div className="min-w-0">
-          <div className="text-sm font-semibold text-gray-900 dark:text-white">
+          <div className="text-xs font-semibold text-gray-900 dark:text-white">
             {title}
           </div>
           <div className="mt-1 text-xs text-gray-600 dark:text-gray-300">

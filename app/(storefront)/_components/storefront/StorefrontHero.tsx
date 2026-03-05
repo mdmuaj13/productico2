@@ -35,10 +35,6 @@ export default function StorefrontHero({
                 {shopName}
               </h1>
 
-              <p className="text-base sm:text-lg text-gray-600 dark:text-gray-300 max-w-xl">
-                {tagline}
-              </p>
-
               <div className="flex flex-wrap gap-3">
                 <Link
                   href="/products"
@@ -98,9 +94,9 @@ export default function StorefrontHero({
                   {shopName}
                 </h1>
 
-                <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 max-w-xl">
+                {/* <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 max-w-xl">
                   {tagline}
-                </p>
+                </p> */}
 
                 <div className="flex flex-wrap gap-2 pt-1">
                   <IconChip icon={Truck}>Fast delivery</IconChip>

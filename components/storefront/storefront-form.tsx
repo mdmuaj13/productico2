@@ -25,7 +25,7 @@ const storefrontFormSchema = z.object({
 	tagline: z.string().optional(),
 	metaTag: z.string().optional(),
 	metaTitle: z.string().optional(),
-	email: z.string().email('Invalid email').optional().or(z.literal('')),
+	email: z.string().email('Invalid email').optional().or(z.literal()),
 	phone: z.string().optional(),
 	address: z.string().optional(),
 });
