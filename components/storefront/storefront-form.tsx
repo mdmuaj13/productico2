@@ -16,7 +16,13 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+	Card,
+	CardContent,
+	CardDescription,
+	CardHeader,
+	CardTitle,
+} from '@/components/ui/card';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 
@@ -25,7 +31,7 @@ const storefrontFormSchema = z.object({
 	tagline: z.string().optional(),
 	metaTag: z.string().optional(),
 	metaTitle: z.string().optional(),
-	email: z.string().email('Invalid email').optional().or(z.literal('')),
+	email: z.union([z.string().email('Invalid email'), z.literal('')]).optional(),
 	phone: z.string().optional(),
 	address: z.string().optional(),
 });
@@ -101,7 +107,11 @@ export function StorefrontForm() {
 			});
 
 			if (response.status_code === 200 || response.status_code === 201) {
-				toast.success(exists ? 'Storefront updated successfully' : 'Storefront created successfully');
+				toast.success(
+					exists
+						? 'Storefront updated successfully'
+						: 'Storefront created successfully',
+				);
 				setExists(true);
 			} else {
 				toast.error(response.message || 'Failed to save storefront');
@@ -195,7 +205,7 @@ export function StorefrontForm() {
 
 						<div className="space-y-4">
 							<h3 className="text-lg font-semibold">Contact Details</h3>
-							
+
 							<FormField
 								control={form.control}
 								name="email"
@@ -203,7 +213,11 @@ export function StorefrontForm() {
 									<FormItem>
 										<FormLabel>Email</FormLabel>
 										<FormControl>
-											<Input type="email" placeholder="contact@shop.com" {...field} />
+											<Input
+												type="email"
+												placeholder="contact@shop.com"
+												{...field}
+											/>
 										</FormControl>
 										<FormMessage />
 									</FormItem>
@@ -231,10 +245,10 @@ export function StorefrontForm() {
 									<FormItem>
 										<FormLabel>Address</FormLabel>
 										<FormControl>
-											<Textarea 
-												placeholder="123 Main St, City, Country" 
+											<Textarea
+												placeholder="123 Main St, City, Country"
 												className="resize-none"
-												{...field} 
+												{...field}
 											/>
 										</FormControl>
 										<FormMessage />

@@ -113,7 +113,7 @@ export function StocksList() {
 		{
 			key: 'productId',
 			header: 'Product',
-			render: (value: unknown) => (value as Product).title,
+			render: (value: unknown) => (value as Product)?.title,
 		},
 		{
 			key: 'variantName',
@@ -126,7 +126,7 @@ export function StocksList() {
 		{
 			key: 'warehouseId',
 			header: 'Warehouse',
-			render: (value: unknown) => <span>{(value as Warehouse).title}</span>,
+			render: (value: unknown) => <span>{(value as Warehouse)?.title}</span>,
 		},
 		{
 			key: 'quantity',
