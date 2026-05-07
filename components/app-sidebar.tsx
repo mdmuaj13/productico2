@@ -30,6 +30,7 @@ import {
 	SidebarMenu,
 	SidebarMenuButton,
 	SidebarMenuItem,
+	useSidebar,
 } from '@/components/ui/sidebar';
 import Link from 'next/link';
 
@@ -75,7 +76,6 @@ const data = {
 			url: '/app/stock',
 			icon: IconDatabase,
 		},
-
 		{
 			title: 'Vendors',
 			url: '/app/vendors',
@@ -120,6 +120,8 @@ const data = {
 };
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+	const { setOpenMobile } = useSidebar();
+
 	return (
 		<Sidebar collapsible="offcanvas" {...props}>
 			<SidebarHeader>
@@ -127,7 +129,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 					<SidebarMenuItem>
 						<SidebarMenuButton
 							asChild
-							className="data-[slot=sidebar-menu-button]:!p-1.5">
+							className="data-[slot=sidebar-menu-button]:!p-1.5"
+							onClick={() => setOpenMobile(false)}>
 							<Link href="/app">
 								<IconBuildingCastle className="!size-5" />
 								<span className="text-base font-semibold">Thread Park</span>
@@ -136,10 +139,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 					</SidebarMenuItem>
 				</SidebarMenu>
 			</SidebarHeader>
-			<SidebarContent>
+			<SidebarContent onClick={() => setOpenMobile(false)}>
 				<NavMain items={data.navMain} />
 				<NavDocuments items={data.documents} />
-				{/* <NavSecondary items={data.navSecondary} className="mt-auto" /> */}
 			</SidebarContent>
 			<SidebarFooter>
 				<NavUser />
